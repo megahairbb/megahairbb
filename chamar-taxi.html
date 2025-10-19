@@ -182,6 +182,7 @@
             color: #e74c3c;
             margin-bottom: 15px;
             text-align: center;
+            min-height: 20px;
         }
         
         .success-message {
@@ -192,6 +193,27 @@
             margin: 15px 0;
             text-align: center;
             display: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #FFD700;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
         @media (max-width: 768px) {
@@ -313,19 +335,24 @@
             <form id="payment-form">
                 <div class="form-group">
                     <label for="card-number">Número do Cartão</label>
-                    <input type="text" id="card-number" placeholder="1234 5678 9012 3456" required>
+                    <input type="text" id="card-number" placeholder="1234 5678 9012 3456" required maxlength="16">
                 </div>
                 
                 <div class="row">
                     <div class="form-group">
                         <label for="card-expiry">Validade (MM/AA)</label>
-                        <input type="text" id="card-expiry" placeholder="12/25" required>
+                        <input type="text" id="card-expiry" placeholder="12/25" required maxlength="5">
                     </div>
                     
                     <div class="form-group">
                         <label for="card-cvc">CVC</label>
-                        <input type="text" id="card-cvc" placeholder="123" required>
+                        <input type="text" id="card-cvc" placeholder="123" required maxlength="3">
                     </div>
+                </div>
+                
+                <div class="loading" id="loading-payment">
+                    <div class="loading-spinner"></div>
+                    <p>Processando pagamento...</p>
                 </div>
                 
                 <div class="card-errors" id="card-errors"></div>
@@ -344,7 +371,6 @@
     <script>
         // Inicializar Stripe
         const stripe = Stripe('pk_live_51SGN5U2HvDIJYgktaJbjaVG6KwJY1vavWq1OW4XOj5mMGsTrIZ1yqRX4mhOV76G9XVYn4CTWl6kUYcM1OzFa1r2P00QncLSuPE');
-        let elements;
         
         // Elementos da interface
         const confirmarBtn = document.getElementById('confirmar-chamada');
@@ -353,6 +379,23 @@
         const paymentForm = document.getElementById('payment-form');
         const cardErrors = document.getElementById('card-errors');
         const successMessage = document.getElementById('success-message');
+        const loadingPayment = document.getElementById('loading-payment');
+        
+        // Formatação dos campos de cartão
+        document.getElementById('card-number').addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+        
+        document.getElementById('card-expiry').addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+            if (e.target.value.length >= 2) {
+                e.target.value = e.target.value.substring(0, 2) + '/' + e.target.value.substring(2, 4);
+            }
+        });
+        
+        document.getElementById('card-cvc').addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
         
         // Inicializar autocomplete para os campos de endereço
         function initAutocomplete() {
@@ -388,6 +431,7 @@
         function closeModal() {
             paymentModal.style.display = 'none';
             cardErrors.textContent = '';
+            loadingPayment.style.display = 'none';
         }
         
         // Processar pagamento
@@ -397,25 +441,43 @@
             const submitBtn = document.getElementById('submit-payment');
             submitBtn.disabled = true;
             submitBtn.textContent = 'Processando...';
+            loadingPayment.style.display = 'block';
+            cardErrors.textContent = '';
             
             try {
+                // Validar dados do cartão
+                const cardNumber = document.getElementById('card-number').value;
+                const cardExpiry = document.getElementById('card-expiry').value;
+                const cardCvc = document.getElementById('card-cvc').value;
+                
+                if (cardNumber.length !== 16) {
+                    throw new Error('Número do cartão deve ter 16 dígitos');
+                }
+                
+                if (!cardExpiry.match(/^\d{2}\/\d{2}$/)) {
+                    throw new Error('Formato de validade inválido (MM/AA)');
+                }
+                
+                if (cardCvc.length !== 3) {
+                    throw new Error('CVC deve ter 3 dígitos');
+                }
+                
                 // Criar token de pagamento
                 const { token, error } = await stripe.createToken('card', {
-                    number: document.getElementById('card-number').value,
-                    exp_month: document.getElementById('card-expiry').value.split('/')[0],
-                    exp_year: document.getElementById('card-expiry').value.split('/')[1],
-                    cvc: document.getElementById('card-cvc').value
+                    number: cardNumber,
+                    exp_month: cardExpiry.split('/')[0],
+                    exp_year: '20' + cardExpiry.split('/')[1],
+                    cvc: cardCvc
                 });
                 
                 if (error) {
-                    cardErrors.textContent = error.message;
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Pagar €0,50';
-                    return;
+                    throw new Error(error.message);
                 }
                 
-                // Enviar token para o servidor (em produção, isso seria feito no backend)
-                // Simulando uma transação bem-sucedida
+                // Simular processamento do pagamento (em produção, enviaria o token para seu backend)
+                console.log('Token gerado:', token.id);
+                
+                // Simular uma transação bem-sucedida
                 setTimeout(() => {
                     // Fechar modal
                     closeModal();
@@ -430,12 +492,16 @@
                     // Habilitar botão do WhatsApp
                     whatsappBtn.disabled = false;
                     
+                    // Resetar formulário de pagamento
+                    paymentForm.reset();
+                    
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Pagar €0,50';
                 }, 2000);
                 
             } catch (error) {
-                cardErrors.textContent = 'Erro no processamento do pagamento';
+                cardErrors.textContent = error.message;
+                loadingPayment.style.display = 'none';
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Pagar €0,50';
             }
