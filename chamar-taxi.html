@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chamar Táxi - LisboaGo</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #000;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #FFD700;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            opacity: 0.8;
+        }
+        
+        .form-container {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #FFD700;
+        }
+        
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .payment-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        
+        .price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0F9D58;
+            margin: 10px 0;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .btn-primary {
+            background: #FFD700;
+            color: #000;
+        }
+        
+        .btn-primary:hover {
+            background: #FFC400;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: #25D366;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #128C7E;
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .driver-info {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            border-left: 4px solid #25D366;
+        }
+        
+        /* Modal de Pagamento */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .modal h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .card-element {
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .card-errors {
+            color: #e74c3c;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .row {
+                grid-template-columns: 1fr;
+            }
+            
+            body {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>LisboaGo</h1>
+            <p>Chame seu táxi em Lisboa</p>
+        </div>
+        
+        <div class="form-container">
+            <form id="taxi-form">
+                <div class="form-group">
+                    <label for="nome">Nome Completo</label>
+                    <input type="text" id="nome" name="nome" required placeholder="Seu nome completo">
+                </div>
+                
+                <div class="form-group">
+                    <label for="origem">Onde você está?</label>
+                    <input type="text" id="origem" name="origem" required placeholder="Endereço de partida">
+                </div>
+                
+                <div class="form-group">
+                    <label for="destino">Pra onde vai?</label>
+                    <input type="text" id="destino" name="destino" required placeholder="Endereço de destino">
+                </div>
+                
+                <div class="row">
+                    <div class="form-group">
+                        <label for="passageiros">Passageiros</label>
+                        <select id="passageiros" name="passageiros" required>
+                            <option value="1">1 passageiro</option>
+                            <option value="2">2 passageiros</option>
+                            <option value="3">3 passageiros</option>
+                            <option value="4">4 passageiros</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="contato">Contato</label>
+                        <input type="tel" id="contato" name="contato" required placeholder="Seu telefone">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Tempo de Chegada</label>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="tempo" value="5" required style="width: auto; margin-right: 5px;">
+                            5 min
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="tempo" value="10" style="width: auto; margin-right: 5px;">
+                            10 min
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="tempo" value="15" style="width: auto; margin-right: 5px;">
+                            15 min
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="pagamento">Forma de Pagamento</label>
+                    <select id="pagamento" name="pagamento" required>
+                        <option value="cartao">Cartão de Crédito/Débito</option>
+                        <option value="dinheiro">Dinheiro</option>
+                        <option value="mbway">MBWay</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="observacao">Observações</label>
+                    <textarea id="observacao" name="observacao" rows="3" placeholder="Informações adicionais..."></textarea>
+                </div>
+                
+                <div class="payment-section">
+                    <h3>Taxa de Chamada</h3>
+                    <div class="price">€0,50</div>
+                    <p>Esta taxa garante sua viagem</p>
+                </div>
+                
+                <button type="button" class="btn btn-primary" id="confirmar-chamada">
+                    Confirmar Chamada - €0,50
+                </button>
+                
+                <div class="driver-info">
+                    <strong>Motorista Disponível</strong><br>
+                    <span style="font-size: 18px; color: #0F9D58;">351 939 354 112</span>
+                </div>
+                
+                <button type="button" class="btn btn-success" id="enviar-whatsapp" disabled>
+                    📱 Enviar Via WhatsApp
+                </button>
+                
+                <div class="success-message" id="success-message">
+                    ✅ Pagamento confirmado! Agora você pode enviar a solicitação via WhatsApp.
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal de Pagamento -->
+    <div class="modal" id="payment-modal">
+        <div class="modal-content">
+            <h2>Pagamento da Taxa</h2>
+            <p style="text-align: center; margin-bottom: 20px;">Valor: <strong>€0,50</strong></p>
+            
+            <form id="payment-form">
+                <div class="form-group">
+                    <label for="card-number">Número do Cartão</label>
+                    <input type="text" id="card-number" placeholder="1234 5678 9012 3456" required>
+                </div>
+                
+                <div class="row">
+                    <div class="form-group">
+                        <label for="card-expiry">Validade (MM/AA)</label>
+                        <input type="text" id="card-expiry" placeholder="12/25" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="card-cvc">CVC</label>
+                        <input type="text" id="card-cvc" placeholder="123" required>
+                    </div>
+                </div>
+                
+                <div class="card-errors" id="card-errors"></div>
+                
+                <button type="submit" class="btn btn-primary" id="submit-payment">
+                    Pagar €0,50
+                </button>
+                
+                <button type="button" class="btn" onclick="closeModal()" style="background: #6c757d; color: white; margin-top: 10px;">
+                    Cancelar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Inicializar Stripe
+        const stripe = Stripe('pk_live_51SGN5U2HvDIJYgktaJbjaVG6KwJY1vavWq1OW4XOj5mMGsTrIZ1yqRX4mhOV76G9XVYn4CTWl6kUYcM1OzFa1r2P00QncLSuPE');
+        let elements;
+        
+        // Elementos da interface
+        const confirmarBtn = document.getElementById('confirmar-chamada');
+        const whatsappBtn = document.getElementById('enviar-whatsapp');
+        const paymentModal = document.getElementById('payment-modal');
+        const paymentForm = document.getElementById('payment-form');
+        const cardErrors = document.getElementById('card-errors');
+        const successMessage = document.getElementById('success-message');
+        
+        // Inicializar autocomplete para os campos de endereço
+        function initAutocomplete() {
+            const origemInput = document.getElementById('origem');
+            const destinoInput = document.getElementById('destino');
+            
+            // Criar autocomplete para origem
+            const autocompleteOrigem = new google.maps.places.Autocomplete(origemInput, {
+                types: ['geocode'],
+                componentRestrictions: { country: 'pt' }
+            });
+            
+            // Criar autocomplete para destino
+            const autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, {
+                types: ['geocode'],
+                componentRestrictions: { country: 'pt' }
+            });
+        }
+        
+        // Abrir modal de pagamento
+        confirmarBtn.addEventListener('click', function() {
+            // Validar formulário primeiro
+            const form = document.getElementById('taxi-form');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            paymentModal.style.display = 'flex';
+        });
+        
+        // Fechar modal
+        function closeModal() {
+            paymentModal.style.display = 'none';
+            cardErrors.textContent = '';
+        }
+        
+        // Processar pagamento
+        paymentForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submit-payment');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processando...';
+            
+            try {
+                // Criar token de pagamento
+                const { token, error } = await stripe.createToken('card', {
+                    number: document.getElementById('card-number').value,
+                    exp_month: document.getElementById('card-expiry').value.split('/')[0],
+                    exp_year: document.getElementById('card-expiry').value.split('/')[1],
+                    cvc: document.getElementById('card-cvc').value
+                });
+                
+                if (error) {
+                    cardErrors.textContent = error.message;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Pagar €0,50';
+                    return;
+                }
+                
+                // Enviar token para o servidor (em produção, isso seria feito no backend)
+                // Simulando uma transação bem-sucedida
+                setTimeout(() => {
+                    // Fechar modal
+                    closeModal();
+                    
+                    // Mostrar mensagem de sucesso
+                    successMessage.style.display = 'block';
+                    
+                    // Desabilitar botão de confirmação
+                    confirmarBtn.disabled = true;
+                    confirmarBtn.textContent = '✅ Pagamento Confirmado';
+                    
+                    // Habilitar botão do WhatsApp
+                    whatsappBtn.disabled = false;
+                    
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Pagar €0,50';
+                }, 2000);
+                
+            } catch (error) {
+                cardErrors.textContent = 'Erro no processamento do pagamento';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Pagar €0,50';
+            }
+        });
+        
+        // Enviar via WhatsApp
+        whatsappBtn.addEventListener('click', function() {
+            const formData = {
+                nome: document.getElementById('nome').value,
+                origem: document.getElementById('origem').value,
+                destino: document.getElementById('destino').value,
+                passageiros: document.getElementById('passageiros').value,
+                contato: document.getElementById('contato').value,
+                tempo: document.querySelector('input[name="tempo"]:checked').value,
+                pagamento: document.getElementById('pagamento').value,
+                observacao: document.getElementById('observacao').value
+            };
+            
+            const message = `🚕 *NOVA SOLICITAÇÃO DE TÁXI - LisboaGo* 🚕
+            
+*Nome:* ${formData.nome}
+*Contato:* ${formData.contato}
+*Origem:* ${formData.origem}
+*Destino:* ${formData.destino}
+*Passageiros:* ${formData.passageiros}
+*Tempo de Chegada:* ${formData.tempo} min
+*Pagamento:* ${formData.pagamento}
+${formData.observacao ? `*Observações:* ${formData.observacao}` : ''}
+
+📍 *Taxa de chamada paga: €0,50*`;
+            
+            const phoneNumber = '351939354112';
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+            
+            window.open(whatsappUrl, '_blank');
+        });
+        
+        // Carregar API do Google Maps para autocomplete
+        function loadGoogleMaps() {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBmc6HTJo70N_ueR1qFVgyu74v7FIl7dU4&libraries=places&callback=initAutocomplete`;
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        }
+        
+        // Inicializar quando a página carregar
+        window.onload = loadGoogleMaps;
+    </script>
+</body>
+</html>

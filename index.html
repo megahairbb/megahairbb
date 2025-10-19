@@ -13,40 +13,40 @@
         
         body, html {
             height: 100%;
-            overflow: hidden;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
         }
         
         #map {
-            height: 100vh;
+            height: calc(100vh - 200px);
             width: 100vw;
         }
         
         /* Cabeçalho */
         header {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
             background: #000;
             color: white;
             padding: 15px 20px;
-            z-index: 1000;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
         
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
         .logo h1 {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 700;
             color: #FFD700;
             margin-bottom: 2px;
         }
         
         .logo p {
-            font-size: 12px;
+            font-size: 14px;
             color: #fff;
             opacity: 0.8;
         }
@@ -70,12 +70,12 @@
         /* Painel de pesquisa */
         .search-panel {
             position: absolute;
-            top: 80px;
+            top: 100px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
             background: rgba(255, 255, 255, 0.95);
-            padding: 15px;
+            padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             width: 90%;
@@ -92,9 +92,41 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
+        /* Botão Chame LisboaGo */
+        .call-taxi-section {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        
+        .btn-call-taxi {
+            background: #FFD700;
+            color: #000;
+            padding: 18px 30px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            font-size: 18px;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+        }
+        
+        .btn-call-taxi:hover {
+            background: #FFC400;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+        }
+        
         .fullscreen-notice {
             position: absolute;
-            bottom: 20px;
+            bottom: 160px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.8);
@@ -181,98 +213,85 @@
             display: none;
         }
         
-        /* Painel do motorista */
-        .driver-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 300px;
-            display: none;
-        }
-        
-        .driver-panel h3 {
-            color: #000;
-            margin-bottom: 10px;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-        }
-        
-        .driver-panel p {
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: #333;
-        }
-        
-        .tracking-btn {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 6px;
-            background: #0F9D58;
+        /* Footer */
+        footer {
+            background: #000;
             color: white;
-            cursor: pointer;
+            padding: 30px 20px;
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 40px;
+        }
+        
+        .footer-section h3 {
+            color: #FFD700;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .footer-section p {
+            margin-bottom: 10px;
             font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            width: 100%;
-            margin-top: 10px;
+            opacity: 0.8;
         }
         
-        .tracking-btn:hover {
-            background: #0b7a46;
+        .footer-links {
+            list-style: none;
         }
         
-        .tracking-active {
-            background: #DB4437;
+        .footer-links li {
+            margin-bottom: 8px;
         }
         
-        .tracking-active:hover {
-            background: #c1351d;
+        .footer-links a {
+            color: white;
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s;
         }
         
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 8px;
+        .footer-links a:hover {
+            opacity: 1;
+            color: #FFD700;
         }
         
-        .tracking-on {
-            background-color: #0F9D58;
-            animation: pulse 1.5s infinite;
-        }
-        
-        .tracking-off {
-            background-color: #DB4437;
-        }
-        
-        .time-display {
-            font-weight: bold;
-            color: #0F9D58;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 20px auto 0;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            text-align: center;
+            opacity: 0.7;
+            font-size: 14px;
         }
         
         @media (max-width: 768px) {
-            .fullscreen-notice {
-                display: block;
+            .search-panel {
+                top: 80px;
+                padding: 15px;
             }
             
-            .driver-panel {
-                bottom: 80px;
-                left: 10px;
-                right: 10px;
-                max-width: none;
+            .call-taxi-section {
+                bottom: 180px;
+            }
+            
+            .fullscreen-notice {
+                display: block;
+                bottom: 140px;
+            }
+            
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            #map {
+                height: calc(100vh - 250px);
             }
             
             .logo h1 {
@@ -288,11 +307,13 @@
 <body>
     <!-- Cabeçalho -->
     <header>
-        <div class="logo">
-            <h1>LisboaGo</h1>
-            <p>Seu Táxi Em Lisboa, Quando Precisar!</p>
+        <div class="header-content">
+            <div class="logo">
+                <h1>LisboaGo</h1>
+                <p>Seu Táxi Em Lisboa, Quando Precisar!</p>
+            </div>
+            <button class="driver-area-btn" id="driver-area-btn">Área do Motorista</button>
         </div>
-        <button class="driver-area-btn" id="driver-area-btn">Área do Motorista</button>
     </header>
     
     <!-- Mapa -->
@@ -300,25 +321,52 @@
     
     <!-- Painel de pesquisa -->
     <div class="search-panel">
-        <input type="text" id="search-box" class="search-input" placeholder="Pesquisar endereço...">
+        <input type="text" id="search-box" class="search-input" placeholder="Onde você está?">
         <input type="text" id="destination-box" class="search-input" placeholder="Pra onde vai?">
     </div>
     
-    <!-- Painel do motorista (inicialmente oculto) -->
-    <div class="driver-panel" id="driver-panel">
-        <h3><span class="status-indicator tracking-off" id="status-indicator"></span> Informações de Localização</h3>
-        <p>Status: <span class="time-display" id="tracking-status">Rastreamento Inativo</span></p>
-        <p>Fuso Horário: <span class="time-display">Lisboa, Portugal</span></p>
-        <p>Hora Atual: <span class="time-display" id="current-time">--:--:--</span></p>
-        <p>Coordenadas: <span class="time-display" id="coordinates">--</span></p>
-        <p>Endereço: <span class="time-display" id="address">--</span></p>
-        <button class="tracking-btn" id="tracking-btn">Iniciar Rastreamento</button>
+    <!-- Botão Chame LisboaGo Separado -->
+    <div class="call-taxi-section">
+        <button class="btn-call-taxi" id="call-taxi-btn">
+            🚕 Chame LisboaGo
+        </button>
     </div>
     
     <!-- Aviso de tela cheia -->
     <div class="fullscreen-notice">
         Para melhor experiência, use em modo paisagem
     </div>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>LisboaGo</h3>
+                <p>Serviço de táxi confiável em Lisboa, disponível 24 horas por dia.</p>
+                <p>Contato: Email: lisboagopt@hotmail.com</p>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Links Rápidos</h3>
+                <ul class="footer-links">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="chamar-taxi.html">Chame Táxi</a></li>
+                    <li><a href="motorista.html">Área do Motorista</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Horário de Operação</h3>
+                <p>24 horas por dia</p>
+                <p>7 dias por semana</p>
+                <p>Atendimento em toda Lisboa</p>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>© 2025 LisboaGo. Todos os direitos reservados.</p>
+        </div>
+    </footer>
     
     <!-- Modal de login -->
     <div class="modal" id="login-modal">
@@ -356,19 +404,13 @@
             // Elementos da interface
             const searchBox = document.getElementById('search-box');
             const destinationBox = document.getElementById('destination-box');
+            const callTaxiBtn = document.getElementById('call-taxi-btn');
             const driverAreaBtn = document.getElementById('driver-area-btn');
             const loginModal = document.getElementById('login-modal');
             const loginBtn = document.getElementById('login-btn');
             const usernameInput = document.getElementById('username');
             const passwordInput = document.getElementById('password');
             const errorMessage = document.getElementById('error-message');
-            const driverPanel = document.getElementById('driver-panel');
-            const trackingBtn = document.getElementById('tracking-btn');
-            const trackingStatus = document.getElementById('tracking-status');
-            const statusIndicator = document.getElementById('status-indicator');
-            const currentTime = document.getElementById('current-time');
-            const coordinates = document.getElementById('coordinates');
-            const address = document.getElementById('address');
             
             // Serviços do Google Maps
             const geocoder = new google.maps.Geocoder();
@@ -376,20 +418,17 @@
             
             // Variáveis de controle
             let currentLocationMarker = null;
-            let trackingInterval = null;
-            let isTracking = false;
-            let isDriverLoggedIn = false;
             
             // Inicializar autocomplete para os campos de pesquisa
             function initAutocomplete() {
                 autocompleteOrigin = new google.maps.places.Autocomplete(searchBox, {
                     types: ['geocode'],
-                    componentRestrictions: { country: 'pt' } // Restringir a Portugal
+                    componentRestrictions: { country: 'pt' }
                 });
                 
                 autocompleteDestination = new google.maps.places.Autocomplete(destinationBox, {
                     types: ['geocode'],
-                    componentRestrictions: { country: 'pt' } // Restringir a Portugal
+                    componentRestrictions: { country: 'pt' }
                 });
                 
                 // Quando um lugar é selecionado na origem
@@ -414,8 +453,6 @@
                         title: place.name,
                         icon: getTaxiIcon()
                     });
-                    
-                    updateAddressInfo(place.geometry.location);
                 });
                 
                 // Quando um lugar é selecionado no destino
@@ -432,95 +469,12 @@
                         position: place.geometry.location,
                         title: 'Destino: ' + place.name,
                         icon: {
-                            url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJDOC4xMyAyIDUgNS4xMyA1IDlDNy42OCAxNC4yNSAxMiAyMSAxMiAyMUMxMiAyMSAxNi4zMiAxNC4yNSAxOSA5QzE5IDUuMTMgMTUuODcgMiAxMiAyWk0xMiAxMS41QzEwLjYyIDExLjUgOS41IDEwLjM4IDkuNSA5QzkuNSA3LjYyIDEwLjYyIDYuNSAxMiA2LjVDMTMuMzggNi41IDE0LjUgNy42MiAxNC41IDlDMTQuNSAxMC4zOCAxMy4zOCAxMS41IDEyIDExLjVaIiBmaWxsPSIjRkY1QjAwIi8+Cjwvc3ZnPgo=',
+                            url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHZpZXdCb3g9IjAgMCAzMCAzMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iNSIgeT0iMTEiIHdpZHRoPSIyMCIgaGVpZ2h0PSIxMiIgcng9IjIiIGZpbGw9IiNGRjVCMDAiLz4KPHJlY3QgeD0iNyIgeT0iNiIgd2lkdGg9IjE2IiBoZWlnaHQ9IjYiIHJ4PSIyIiBmaWxsPSIjRkY1QjAwIi8+CjxjaXJjbGUgY3g9IjEwIiBjeT0iMjQiIHI9IjIiIGZpbGw9IiMzMzMiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyNCIgcj0iMiIgZmlsbD0iIzMzMyIvPgo8cmVjdCB4PSI4IiB5PSI4IiB3aWR0aD0iMTQiIGhlaWdodD0iNiIgZmlsbD0iI0ZGRiIvPgo8cmVjdCB4PSIxMCIgeT0iMTMiIHdpZHRoPSIxMCIgaGVpZ2h0PSI4IiBmaWxsPSIjRkZGIi8+Cjwvc3ZnPgo=',
                             scaledSize: new google.maps.Size(30, 30),
                             anchor: new google.maps.Point(15, 15)
                         }
                     });
                 });
-            }
-            
-            // Atualizar informações de endereço
-            function updateAddressInfo(position) {
-                coordinates.textContent = `${position.lat().toFixed(6)}, ${position.lng().toFixed(6)}`;
-                
-                geocoder.geocode({ location: position }, function(results, status) {
-                    if (status === 'OK') {
-                        if (results[0]) {
-                            address.textContent = results[0].formatted_address;
-                        } else {
-                            address.textContent = "Endereço não encontrado";
-                        }
-                    } else {
-                        address.textContent = "Erro ao buscar endereço";
-                    }
-                });
-            }
-            
-            // Iniciar/parar rastreamento
-            function toggleTracking() {
-                if (!isTracking) {
-                    // Iniciar rastreamento
-                    if (navigator.geolocation) {
-                        trackingInterval = navigator.geolocation.watchPosition(
-                            function(position) {
-                                const pos = {
-                                    lat: position.coords.latitude,
-                                    lng: position.coords.longitude
-                                };
-                                
-                                map.setCenter(pos);
-                                
-                                // Adicionar/atualizar marcador
-                                if (currentLocationMarker) {
-                                    currentLocationMarker.setMap(null);
-                                }
-                                
-                                currentLocationMarker = new google.maps.Marker({
-                                    map: map,
-                                    position: pos,
-                                    title: 'Sua localização atual (Rastreando)',
-                                    icon: getTaxiIcon()
-                                });
-                                
-                                updateAddressInfo(new google.maps.LatLng(pos.lat, pos.lng));
-                            },
-                            function(error) {
-                                alert('Erro no rastreamento: ' + error.message);
-                                stopTracking();
-                            },
-                            {
-                                enableHighAccuracy: true,
-                                timeout: 5000,
-                                maximumAge: 0
-                            }
-                        );
-                        
-                        isTracking = true;
-                        trackingBtn.textContent = 'Parar Rastreamento';
-                        trackingBtn.classList.add('tracking-active');
-                        trackingStatus.textContent = 'Rastreamento Ativo';
-                        statusIndicator.className = 'status-indicator tracking-on';
-                    } else {
-                        alert('Seu navegador não suporta geolocalização.');
-                    }
-                } else {
-                    // Parar rastreamento
-                    stopTracking();
-                }
-            }
-            
-            // Parar rastreamento
-            function stopTracking() {
-                if (trackingInterval && navigator.geolocation) {
-                    navigator.geolocation.clearWatch(trackingInterval);
-                }
-                
-                isTracking = false;
-                trackingBtn.textContent = 'Iniciar Rastreamento';
-                trackingBtn.classList.remove('tracking-active');
-                trackingStatus.textContent = 'Rastreamento Inativo';
-                statusIndicator.className = 'status-indicator tracking-off';
             }
             
             // Obter ícone do táxi
@@ -530,13 +484,6 @@
                     scaledSize: new google.maps.Size(40, 40),
                     anchor: new google.maps.Point(20, 20)
                 };
-            }
-            
-            // Atualizar hora de Lisboa
-            function updateLisbonTime() {
-                const now = new Date();
-                const lisbonTime = new Date(now.toLocaleString("en-US", {timeZone: "Europe/Lisbon"}));
-                currentTime.textContent = lisbonTime.toLocaleTimeString('pt-PT');
             }
             
             // Abrir modal de login
@@ -558,23 +505,18 @@
                 const password = passwordInput.value;
                 
                 if (username === 'Mega' && password === '12345') {
-                    // Login bem-sucedido
-                    isDriverLoggedIn = true;
-                    loginModal.style.display = 'none';
-                    driverPanel.style.display = 'block';
-                    errorMessage.style.display = 'none';
-                    
-                    // Limpar campos
-                    usernameInput.value = '';
-                    passwordInput.value = '';
+                    // Redirecionar para a página do motorista
+                    window.location.href = 'motorista.html';
                 } else {
                     // Login falhou
                     errorMessage.style.display = 'block';
                 }
             });
             
-            // Event listeners
-            trackingBtn.addEventListener('click', toggleTracking);
+            // Botão Chame LisboaGo
+            callTaxiBtn.addEventListener('click', function() {
+                window.location.href = 'chamar-taxi.html';
+            });
             
             // Ajustar o mapa quando a janela for redimensionada
             window.addEventListener('resize', function() {
@@ -583,10 +525,6 @@
             
             // Inicializar autocomplete
             initAutocomplete();
-            
-            // Atualizar hora a cada segundo
-            setInterval(updateLisbonTime, 1000);
-            updateLisbonTime();
         }
         
         // Carregar a API do Google Maps
