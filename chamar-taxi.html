@@ -462,20 +462,23 @@
                     throw new Error('CVC deve ter 3 dígitos');
                 }
                 
-                // Criar token de pagamento
-                const { token, error } = await stripe.createToken('card', {
-                    number: cardNumber,
-                    exp_month: cardExpiry.split('/')[0],
-                    exp_year: '20' + cardExpiry.split('/')[1],
-                    cvc: cardCvc
+                // Criar payment method (nova forma correta)
+                const { paymentMethod, error } = await stripe.createPaymentMethod({
+                    type: 'card',
+                    card: {
+                        number: cardNumber,
+                        exp_month: cardExpiry.split('/')[0],
+                        exp_year: '20' + cardExpiry.split('/')[1],
+                        cvc: cardCvc,
+                    },
                 });
                 
                 if (error) {
                     throw new Error(error.message);
                 }
                 
-                // Simular processamento do pagamento (em produção, enviaria o token para seu backend)
-                console.log('Token gerado:', token.id);
+                // Simular processamento do pagamento (em produção, enviaria o paymentMethod.id para seu backend)
+                console.log('Payment Method criado:', paymentMethod.id);
                 
                 // Simular uma transação bem-sucedida
                 setTimeout(() => {
