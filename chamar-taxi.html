@@ -171,11 +171,26 @@
             color: #333;
         }
         
-        .card-element {
-            padding: 12px;
+        /* Stripe Elements Styles */
+        .StripeElement {
+            padding: 12px 15px;
             border: 2px solid #e1e1e1;
             border-radius: 8px;
             margin-bottom: 20px;
+            background: white;
+            transition: border-color 0.3s;
+        }
+        
+        .StripeElement--focus {
+            border-color: #FFD700;
+        }
+        
+        .StripeElement--invalid {
+            border-color: #e74c3c;
+        }
+        
+        .StripeElement--complete {
+            border-color: #0F9D58;
         }
         
         .card-errors {
@@ -183,6 +198,7 @@
             margin-bottom: 15px;
             text-align: center;
             min-height: 20px;
+            font-size: 14px;
         }
         
         .success-message {
@@ -334,19 +350,19 @@
             
             <form id="payment-form">
                 <div class="form-group">
-                    <label for="card-number">Número do Cartão</label>
-                    <input type="text" id="card-number" placeholder="1234 5678 9012 3456" required maxlength="16">
+                    <label>Número do Cartão</label>
+                    <div id="card-number-element" class="StripeElement"></div>
                 </div>
                 
                 <div class="row">
                     <div class="form-group">
-                        <label for="card-expiry">Validade (MM/AA)</label>
-                        <input type="text" id="card-expiry" placeholder="12/25" required maxlength="5">
+                        <label>Validade</label>
+                        <div id="card-expiry-element" class="StripeElement"></div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="card-cvc">CVC</label>
-                        <input type="text" id="card-cvc" placeholder="123" required maxlength="3">
+                        <label>CVC</label>
+                        <div id="card-cvc-element" class="StripeElement"></div>
                     </div>
                 </div>
                 
@@ -371,6 +387,52 @@
     <script>
         // Inicializar Stripe
         const stripe = Stripe('pk_live_51SGN5U2HvDIJYgktaJbjaVG6KwJY1vavWq1OW4XOj5mMGsTrIZ1yqRX4mhOV76G9XVYn4CTWl6kUYcM1OzFa1r2P00QncLSuPE');
+        let elements;
+        let cardNumber;
+        let cardExpiry;
+        let cardCvc;
+        
+        // Inicializar Stripe Elements
+        function initializeStripeElements() {
+            elements = stripe.elements();
+            
+            const style = {
+                base: {
+                    fontSize: '16px',
+                    color: '#32325d',
+                    fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+                    '::placeholder': {
+                        color: '#aab7c4'
+                    }
+                },
+                invalid: {
+                    color: '#e74c3c'
+                }
+            };
+            
+            cardNumber = elements.create('cardNumber', { style: style });
+            cardNumber.mount('#card-number-element');
+            
+            cardExpiry = elements.create('cardExpiry', { style: style });
+            cardExpiry.mount('#card-expiry-element');
+            
+            cardCvc = elements.create('cardCvc', { style: style });
+            cardCvc.mount('#card-cvc-element');
+            
+            // Listen for errors
+            cardNumber.on('change', handleCardChange);
+            cardExpiry.on('change', handleCardChange);
+            cardCvc.on('change', handleCardChange);
+        }
+        
+        function handleCardChange(event) {
+            const displayError = document.getElementById('card-errors');
+            if (event.error) {
+                displayError.textContent = event.error.message;
+            } else {
+                displayError.textContent = '';
+            }
+        }
         
         // Elementos da interface
         const confirmarBtn = document.getElementById('confirmar-chamada');
@@ -380,22 +442,6 @@
         const cardErrors = document.getElementById('card-errors');
         const successMessage = document.getElementById('success-message');
         const loadingPayment = document.getElementById('loading-payment');
-        
-        // Formatação dos campos de cartão
-        document.getElementById('card-number').addEventListener('input', function(e) {
-            e.target.value = e.target.value.replace(/\D/g, '');
-        });
-        
-        document.getElementById('card-expiry').addEventListener('input', function(e) {
-            e.target.value = e.target.value.replace(/\D/g, '');
-            if (e.target.value.length >= 2) {
-                e.target.value = e.target.value.substring(0, 2) + '/' + e.target.value.substring(2, 4);
-            }
-        });
-        
-        document.getElementById('card-cvc').addEventListener('input', function(e) {
-            e.target.value = e.target.value.replace(/\D/g, '');
-        });
         
         // Inicializar autocomplete para os campos de endereço
         function initAutocomplete() {
@@ -445,31 +491,12 @@
             cardErrors.textContent = '';
             
             try {
-                // Validar dados do cartão
-                const cardNumber = document.getElementById('card-number').value;
-                const cardExpiry = document.getElementById('card-expiry').value;
-                const cardCvc = document.getElementById('card-cvc').value;
-                
-                if (cardNumber.length !== 16) {
-                    throw new Error('Número do cartão deve ter 16 dígitos');
-                }
-                
-                if (!cardExpiry.match(/^\d{2}\/\d{2}$/)) {
-                    throw new Error('Formato de validade inválido (MM/AA)');
-                }
-                
-                if (cardCvc.length !== 3) {
-                    throw new Error('CVC deve ter 3 dígitos');
-                }
-                
-                // Criar payment method (nova forma correta)
+                // Criar payment method com Stripe Elements
                 const { paymentMethod, error } = await stripe.createPaymentMethod({
                     type: 'card',
-                    card: {
-                        number: cardNumber,
-                        exp_month: cardExpiry.split('/')[0],
-                        exp_year: '20' + cardExpiry.split('/')[1],
-                        cvc: cardCvc,
+                    card: cardNumber,
+                    billing_details: {
+                        name: document.getElementById('nome').value,
                     },
                 });
                 
@@ -477,10 +504,9 @@
                     throw new Error(error.message);
                 }
                 
-                // Simular processamento do pagamento (em produção, enviaria o paymentMethod.id para seu backend)
                 console.log('Payment Method criado:', paymentMethod.id);
                 
-                // Simular uma transação bem-sucedida
+                // Simular processamento do pagamento
                 setTimeout(() => {
                     // Fechar modal
                     closeModal();
@@ -494,9 +520,6 @@
                     
                     // Habilitar botão do WhatsApp
                     whatsappBtn.disabled = false;
-                    
-                    // Resetar formulário de pagamento
-                    paymentForm.reset();
                     
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Pagar €0,50';
@@ -553,7 +576,10 @@ ${formData.observacao ? `*Observações:* ${formData.observacao}` : ''}
         }
         
         // Inicializar quando a página carregar
-        window.onload = loadGoogleMaps;
+        window.onload = function() {
+            loadGoogleMaps();
+            initializeStripeElements();
+        };
     </script>
 </body>
 </html>
