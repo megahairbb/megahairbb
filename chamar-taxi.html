@@ -480,58 +480,66 @@
             loadingPayment.style.display = 'none';
         }
         
-        // Processar pagamento
-        paymentForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const submitBtn = document.getElementById('submit-payment');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Processando...';
-            loadingPayment.style.display = 'block';
-            cardErrors.textContent = '';
-            
-            try {
-                // Criar payment method com Stripe Elements
-                const { paymentMethod, error } = await stripe.createPaymentMethod({
-                    type: 'card',
-                    card: cardNumber,
-                    billing_details: {
-                        name: document.getElementById('nome').value,
-                    },
-                });
-                
-                if (error) {
-                    throw new Error(error.message);
-                }
-                
-                console.log('Payment Method criado:', paymentMethod.id);
-                
-                // Simular processamento do pagamento
-                setTimeout(() => {
-                    // Fechar modal
-                    closeModal();
-                    
-                    // Mostrar mensagem de sucesso
-                    successMessage.style.display = 'block';
-                    
-                    // Desabilitar botão de confirmação
-                    confirmarBtn.disabled = true;
-                    confirmarBtn.textContent = '✅ Pagamento Confirmado';
-                    
-                    // Habilitar botão do WhatsApp
-                    whatsappBtn.disabled = false;
-                    
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Pagar €0,50';
-                }, 2000);
-                
-            } catch (error) {
-                cardErrors.textContent = error.message;
-                loadingPayment.style.display = 'none';
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Pagar €0,50';
-            }
+        // Processar pagamento - VERSÃO COM BACKEND
+paymentForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submit-payment');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processando...';
+    loadingPayment.style.display = 'block';
+    cardErrors.textContent = '';
+    
+    try {
+        // Criar payment method com Stripe Elements
+        const { paymentMethod, error } = await stripe.createPaymentMethod({
+            type: 'card',
+            card: cardNumber,
+            billing_details: {
+                name: document.getElementById('nome').value,
+            },
         });
+        
+        if (error) {
+            throw new Error(error.message);
+        }
+        
+        console.log('Payment Method criado:', paymentMethod.id);
+        
+        // ENVIAR PARA O BACKEND PARA PROCESSAR PAGAMENTO REAL
+        const response = await fetch('http://localhost:3000/api/pagamento', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                paymentMethodId: paymentMethod.id,
+                amount: 50, // €0,50 em centavos
+                currency: 'eur'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error);
+        }
+        
+        // Pagamento bem-sucedido
+        closeModal();
+        successMessage.style.display = 'block';
+        confirmarBtn.disabled = true;
+        confirmarBtn.textContent = '✅ Pagamento Confirmado';
+        whatsappBtn.disabled = false;
+        
+    } catch (error) {
+        cardErrors.textContent = error.message;
+    } finally {
+        loadingPayment.style.display = 'none';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Pagar €0,50';
+    }
+});
         
         // Enviar via WhatsApp
         whatsappBtn.addEventListener('click', function() {
