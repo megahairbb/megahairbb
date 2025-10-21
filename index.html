@@ -303,31 +303,48 @@
         // Variáveis globais
         let map;
         let driverMarker = null;
+        let lastDriverPosition = null;
 
-        // Sistema de comunicação entre páginas usando localStorage
-        function setupDriverTracking() {
-            console.log('Configurando rastreamento do motorista...');
+        // Sistema de rastreamento em tempo real
+        function setupRealTimeTracking() {
+            console.log('Iniciando rastreamento em tempo real...');
             
-            // Verificar se há motorista online
+            // Verificar status inicial
             checkDriverStatus();
             
-            // Verificar a cada 3 segundos se há atualizações do motorista
-            setInterval(checkDriverStatus, 3000);
+            // Verificar a cada 1 segundo para tempo real
+            setInterval(checkDriverStatus, 1000);
+            
+            // Também usar event listener para mudanças no localStorage
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'lisboago_driver_data') {
+                    checkDriverStatus();
+                }
+            });
         }
 
         // Verificar status do motorista
         function checkDriverStatus() {
             const driverData = getDriverData();
             
-            if (driverData && driverData.isTracking) {
-                // Motorista está online e rastreando
-                updateDriverMarker(driverData.position);
-                updateDriverStatus(true);
-                console.log('Motorista online - Posição:', driverData.position);
+            if (driverData && driverData.isTracking && driverData.position) {
+                // Verificar se a posição mudou
+                if (!lastDriverPosition || 
+                    lastDriverPosition.lat !== driverData.position.lat || 
+                    lastDriverPosition.lng !== driverData.position.lng) {
+                    
+                    lastDriverPosition = driverData.position;
+                    updateDriverMarker(driverData.position);
+                    updateDriverStatus(true);
+                    console.log('Posição atualizada:', driverData.position);
+                }
             } else {
                 // Motorista offline
-                removeDriverMarker();
-                updateDriverStatus(false);
+                if (driverMarker) {
+                    removeDriverMarker();
+                    updateDriverStatus(false);
+                    lastDriverPosition = null;
+                }
             }
         }
 
@@ -338,13 +355,13 @@
                 if (data) {
                     const driverData = JSON.parse(data);
                     
-                    // Verificar se os dados não são muito antigos (menos de 30 segundos)
+                    // Verificar se os dados não são muito antigos (menos de 10 segundos)
                     const now = Date.now();
-                    if (now - driverData.timestamp < 30000) { // 30 segundos
+                    if (now - driverData.timestamp < 10000) { // 10 segundos
                         return driverData;
                     } else {
                         // Dados muito antigos, limpar
-                        console.log('Dados do motorista muito antigos, limpando...');
+                        console.log('Dados do motorista muito antigos');
                         localStorage.removeItem('lisboago_driver_data');
                     }
                 }
@@ -354,24 +371,23 @@
             return null;
         }
 
-        // Atualizar marcador do motorista no mapa - SEM ANIMAÇÃO DE PULO
+        // Atualizar marcador do motorista no mapa
         function updateDriverMarker(position) {
             if (!map) return;
             
             if (driverMarker) {
-                // Atualizar posição do marcador existente - MOVIMENTO SUAVE
+                // Movimento suave para nova posição
                 driverMarker.setPosition(position);
             } else {
-                // Criar novo marcador - SEM ANIMAÇÃO DE BOUNCE
+                // Criar novo marcador
                 driverMarker = new google.maps.Marker({
                     map: map,
                     position: position,
                     title: 'Motorista LisboaGo - Disponível',
                     icon: getTaxiIcon()
-                    // REMOVIDO: animation: google.maps.Animation.BOUNCE
                 });
                 
-                console.log('Marcador do motorista criado:', position);
+                console.log('Novo marcador do motorista criado');
             }
         }
 
@@ -407,7 +423,7 @@
 
         // Inicialização do mapa
         function initMap() {
-            console.log('Inicializando mapa...');
+            console.log('Inicializando mapa principal...');
             
             // Configuração inicial do mapa
             const mapOptions = {
@@ -538,10 +554,10 @@
             // Inicializar autocomplete
             initAutocomplete();
 
-            // Configurar sistema de rastreamento do motorista
-            setupDriverTracking();
+            // Iniciar rastreamento em tempo real
+            setupRealTimeTracking();
 
-            console.log('Mapa inicializado com sucesso');
+            console.log('Mapa principal inicializado com sucesso');
         }
         
         // Carregar a API do Google Maps
@@ -555,7 +571,7 @@
         
         // Inicializar quando a página carregar
         window.onload = function() {
-            console.log('Página carregada, iniciando aplicação...');
+            console.log('Página inicial carregada');
             loadGoogleMaps();
         };
     </script>
