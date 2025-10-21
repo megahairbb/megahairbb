@@ -198,27 +198,6 @@
             display: none;
         }
         
-        .driver-status {
-            position: absolute;
-            top: 120px;
-            right: 20px;
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 10px 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .status-online {
-            color: #0F9D58;
-        }
-        
-        .status-offline {
-            color: #DB4437;
-        }
-        
         @media (max-width: 768px) {
             .search-panel {
                 top: 70px;
@@ -232,13 +211,6 @@
             .btn-call-taxi {
                 padding: 14px 20px;
                 font-size: 15px;
-            }
-            
-            .driver-status {
-                top: 110px;
-                right: 10px;
-                font-size: 11px;
-                padding: 8px 12px;
             }
             
             .logo h1 {
@@ -268,11 +240,6 @@
     <div class="search-panel">
         <input type="text" id="search-box" class="search-input" placeholder="Onde você está?">
         <input type="text" id="destination-box" class="search-input" placeholder="Pra onde vai?">
-    </div>
-    
-    <!-- Status do Motorista -->
-    <div class="driver-status" id="driver-status">
-        <span id="status-text">Motorista: <span class="status-offline">Offline</span></span>
     </div>
     
     <!-- Botão Chame LisboaGo -->
@@ -312,8 +279,8 @@
             // Verificar status inicial
             checkDriverStatus();
             
-            // Verificar a cada 1 segundo para tempo real
-            setInterval(checkDriverStatus, 1000);
+            // Verificar a cada 2 segundos para tempo real
+            setInterval(checkDriverStatus, 2000);
             
             // Também usar event listener para mudanças no localStorage
             window.addEventListener('storage', function(e) {
@@ -335,15 +302,14 @@
                     
                     lastDriverPosition = driverData.position;
                     updateDriverMarker(driverData.position);
-                    updateDriverStatus(true);
-                    console.log('Posição atualizada:', driverData.position);
+                    console.log('Posição do motorista atualizada:', driverData.position);
                 }
             } else {
-                // Motorista offline
-                if (driverMarker) {
+                // Motorista offline - SÓ REMOVE SE NÃO ESTIVER RASTREANDO
+                if (driverMarker && (!driverData || !driverData.isTracking)) {
                     removeDriverMarker();
-                    updateDriverStatus(false);
                     lastDriverPosition = null;
+                    console.log('Motorista parou o rastreamento - removendo carrinho');
                 }
             }
         }
@@ -355,14 +321,14 @@
                 if (data) {
                     const driverData = JSON.parse(data);
                     
-                    // Verificar se os dados não são muito antigos (menos de 10 segundos)
+                    // Verificar se os dados não são muito antigos (menos de 30 segundos)
                     const now = Date.now();
-                    if (now - driverData.timestamp < 10000) { // 10 segundos
+                    if (now - driverData.timestamp < 30000) { // 30 segundos
                         return driverData;
                     } else {
                         // Dados muito antigos, limpar
-                        console.log('Dados do motorista muito antigos');
-                        localStorage.removeItem('lisboago_driver_data');
+                        console.log('Dados do motorista muito antigos - mantendo carrinho');
+                        // NÃO LIMPA O LOCALSTORAGE - mantém o carrinho visível
                     }
                 }
             } catch (error) {
@@ -391,31 +357,19 @@
             }
         }
 
-        // Remover marcador do motorista
+        // Remover marcador do motorista - SÓ QUANDO PARAR RASTREAMENTO
         function removeDriverMarker() {
             if (driverMarker) {
                 driverMarker.setMap(null);
                 driverMarker = null;
-                console.log('Marcador do motorista removido');
-            }
-        }
-
-        // Atualizar status na interface
-        function updateDriverStatus(isOnline) {
-            const statusElement = document.getElementById('status-text');
-            if (statusElement) {
-                if (isOnline) {
-                    statusElement.innerHTML = 'Motorista: <span class="status-online">Online</span>';
-                } else {
-                    statusElement.innerHTML = 'Motorista: <span class="status-offline">Offline</span>';
-                }
+                console.log('Marcador do motorista removido (rastreamento parado)');
             }
         }
 
         // Obter ícone do táxi
         function getTaxiIcon() {
             return {
-                url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iNiIgeT0iMTQiIHdpZHRoPSIyOCIgaGVpZ2h0PSIxNiIgcng9IjMiIGZpbGw9IiNGRjVCMDAiLz4KPHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjgiIHJ4PSIyIiBmaWxsPSIjRkY1QjAwIi8+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMzIiIHI9IjMiIGZpbGw9IiMzMzMiLz4KPGNpcmNsZSBjeD0iMjgiIGN5PSIzMiIgcj0iMyIgZmlsbD0iIzMzMyIvPgo8cmVjdCB4PSI5IiB5PSIxMCIgd2lkdGg9IjIyIiBoZWlnaHQ9IjgiIGZpbGw9IiNGRkYiLz4KPHJlY3QgeD0iMTIiIHk9IjE3IiB3aWR0aD0iMTYiIGhlaWdodD0iMTAiIGZpbGw9IiNGRkYiLz4KPC9zdmc+',
+                url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iNiIgeT0iMTQiIHdpZHRoPSIyOCIgaGVpZ2h0PSIxNiIgcng9IjMiIGZpbGw9IiNGRjVCMDAiLz4KPHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjgiIHJ4PSIyIiBmaWxsPSIjRkY1QjAwIi8+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMzIiIHI9IjMiIGZpbGw9IiMzMzMiLz4KPGNpcmNsZSBjeD0iMjgiIGN5PSIzMiIgcj0iMyIgZpbGw9IiMzMzMiLz4KPHJlY3QgeD0iOSIgeT0iMTAiIHdpZHRoPSIyMiIgaGVpZ2h0PSI4IiBmaWxsPSIjRkZGIi8+CjxwYXRoIGQ9Ik0xMiAxN0gyOFYyN0gxMlYxN1oiIGZpbGw9IiNGRkYiLz4KPC9zdmc+',
                 scaledSize: new google.maps.Size(50, 50),
                 anchor: new google.maps.Point(25, 25)
             };

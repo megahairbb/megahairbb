@@ -313,15 +313,15 @@
             <div class="driver-info">
                 <div class="info-item">
                     <span class="info-label">Nome:</span>
-                    <span class="info-value">Mega Silva</span>
+                    <span class="info-value">Mega Hair</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Celular:</span>
-                    <span class="info-value">+351 912 345 678</span>
+                    <span class="info-value">+351 939 354 112</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Email:</span>
-                    <span class="info-value">mega.silva@lisboago.pt</span>
+                    <span class="info-value">megahairbb@hotmail.com</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Status:</span>
@@ -517,7 +517,14 @@
             if (updateTimer) {
                 clearInterval(updateTimer);
             }
-
+            
+            // LIMPAR DADOS DO LOCALSTORAGE APENAS QUANDO PARAR MANUALMENTE
+            try {
+                localStorage.removeItem('lisboago_driver_data');
+                updateSyncStatus('error', 'Rastreamento parado');
+            } catch (error) {
+                console.error('Erro ao limpar localStorage:', error);
+            }
             
             isDriverTracking = false;
             document.getElementById('tracking-btn').textContent = 'Iniciar Rastreamento';
@@ -526,7 +533,7 @@
             document.getElementById('status-indicator').className = 'status-indicator tracking-off';
             document.getElementById('update-seconds').textContent = '-- segundos';
             
-            console.log('Rastreamento do motorista parado');
+            console.log('Rastreamento do motorista parado - localStorage limpo');
         }
 
         // Iniciar contador de atualização
@@ -564,7 +571,7 @@
         // Obter ícone do táxi
         function getTaxiIcon() {
             return {
-                url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iNiIgeT0iMTQiIHdpZHRoPSIyOCIgaGVpZ2h0PSIxNiIgcng9IjMiIGZpbGw9IiNGRjVCMDAiLz4KPHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjgiIHJ4PSIyIiBmaWxsPSIjRkY1QjAwIi8+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMzIiIHI9IjMiIGZpbGw9IiMzMzMiLz4KPGNpcmNsZSBjeD0iMjgiIGN5PSIzMiIgcj0iMyIgZmlsbD0iIzMzMyIvPgo8cmVjdCB4PSI5IiB5PSIxMCIgd2lkdGg9IjIyIiBoZWlnaHQ9IjgiIGZpbGw9IiNGRkYiLz4KPHJlY3QgeD0iMTIiIHk9IjE3IiB3aWR0aD0iMTYiIGhlaWdodD0iMTAiIGZpbGw9IiNGRkYiLz4KPC9zdmc+',
+                url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iNiIgeT0iMTQiIHdpZHRoPSIyOCIgaGVpZ2h0PSIxNiIgcng9IjMiIGZpbGw9IiNGRjVCMDAiLz4KPHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjgiIHJ4PSIyIiBmaWxsPSIjRkY1QjAwIi8+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMzIiIHI9IjMiIGZpbGw9IiMzMzMiLz4KPGNpcmNsZSBjeD0iMjgiIGN5PSIzIiByPSIzIiBmaWxsPSIjMzMzIi8+CjxjaXJjbGUgY3g9IjI4IiBjeT0iMzIiIHI9IjMiIGZpbGw9IiMzMzMiLz4KPHJlY3QgeD0iOSIgeT0iMTAiIHdpZHRoPSIyMiIgaGVpZ2h0PSI4IiBmaWxsPSIjRkZGIi8+CjxwYXRoIGQ9Ik0xMiAxN0gyOFYyN0gxMlYxN1oiIGZpbGw9IiNGRkYiLz4KPC9zdmc+',
                 scaledSize: new google.maps.Size(50, 50),
                 anchor: new google.maps.Point(25, 25)
             };
@@ -636,8 +643,6 @@
                 console.error('Erro ao verificar rastreamento anterior:', error);
             }
         };
-
-        
     </script>
 </body>
 </html>
