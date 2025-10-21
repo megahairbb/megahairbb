@@ -517,14 +517,7 @@
             if (updateTimer) {
                 clearInterval(updateTimer);
             }
-            
-            // Limpar dados do localStorage
-            try {
-                localStorage.removeItem('lisboago_driver_data');
-                updateSyncStatus('error', 'Rastreamento parado');
-            } catch (error) {
-                console.error('Erro ao limpar localStorage:', error);
-            }
+
             
             isDriverTracking = false;
             document.getElementById('tracking-btn').textContent = 'Iniciar Rastreamento';
@@ -644,12 +637,7 @@
             }
         };
 
-        // Limpar dados ao fechar a página
-        window.addEventListener('beforeunload', function() {
-            if (isDriverTracking) {
-                localStorage.removeItem('lisboago_driver_data');
-            }
-        });
+        
     </script>
 </body>
 </html>
