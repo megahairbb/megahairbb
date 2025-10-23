@@ -271,50 +271,70 @@
         let map;
         let driverMarker = null;
         let lastDriverPosition = null;
+        let positionUpdateInterval = null;
 
-        // Sistema de rastreamento em tempo real
+        // Sistema de rastreamento em tempo real ULTRA-RÁPIDO
         function setupRealTimeTracking() {
-            console.log('Iniciando rastreamento em tempo real...');
+            console.log('🚕 Iniciando rastreamento em tempo real ULTRA-RÁPIDO...');
             
-            // Verificar status inicial
+            // Limpar intervalo anterior se existir
+            if (positionUpdateInterval) {
+                clearInterval(positionUpdateInterval);
+            }
+            
+            // Verificar status inicial IMEDIATAMENTE
             checkDriverStatus();
             
-            // Verificar a cada 2 segundos para tempo real
-            setInterval(checkDriverStatus, 2000);
+            // Verificar a cada 500ms para TEMPO REAL
+            positionUpdateInterval = setInterval(checkDriverStatus, 500);
             
-            // Também usar event listener para mudanças no localStorage
+            // Event listener para mudanças no localStorage (instantâneo)
             window.addEventListener('storage', function(e) {
                 if (e.key === 'lisboago_driver_data') {
+                    console.log('📡 Evento de storage detectado - atualizando posição');
                     checkDriverStatus();
                 }
             });
+            
+            // Também usar polling mais agressivo para garantir sincronização
+            window.addEventListener('focus', function() {
+                console.log('🔄 Página em foco - forçando atualização');
+                checkDriverStatus();
+            });
         }
 
-        // Verificar status do motorista
+        // Verificar status do motorista - VERSÃO CORRIGIDA
         function checkDriverStatus() {
             const driverData = getDriverData();
             
             if (driverData && driverData.isTracking && driverData.position) {
-                // Verificar se a posição mudou
+                const newPosition = driverData.position;
+                
+                // SEMPRE atualizar, mesmo se a posição for a mesma (para garantir sincronização)
                 if (!lastDriverPosition || 
-                    lastDriverPosition.lat !== driverData.position.lat || 
-                    lastDriverPosition.lng !== driverData.position.lng) {
+                    lastDriverPosition.lat !== newPosition.lat || 
+                    lastDriverPosition.lng !== newPosition.lng) {
                     
-                    lastDriverPosition = driverData.position;
-                    updateDriverMarker(driverData.position);
-                    console.log('Posição do motorista atualizada:', driverData.position);
+                    lastDriverPosition = newPosition;
+                    updateDriverMarker(newPosition);
+                    console.log('📍 Posição atualizada:', newPosition);
+                } else {
+                    // Posição é a mesma, mas garantir que o marcador está visível
+                    if (driverMarker) {
+                        driverMarker.setMap(map);
+                    }
                 }
             } else {
                 // Motorista offline - SÓ REMOVE SE NÃO ESTIVER RASTREANDO
                 if (driverMarker && (!driverData || !driverData.isTracking)) {
                     removeDriverMarker();
                     lastDriverPosition = null;
-                    console.log('Motorista parou o rastreamento - removendo carrinho');
+                    console.log('❌ Motorista parou o rastreamento - removendo carrinho');
                 }
             }
         }
 
-        // Obter dados do motorista do localStorage
+        // Obter dados do motorista do localStorage - VERSÃO OTIMIZADA
         function getDriverData() {
             try {
                 const data = localStorage.getItem('lisboago_driver_data');
@@ -326,50 +346,60 @@
                     if (now - driverData.timestamp < 30000) { // 30 segundos
                         return driverData;
                     } else {
-                        // Dados muito antigos, limpar
-                        console.log('Dados do motorista muito antigos - mantendo carrinho');
-                        // NÃO LIMPA O LOCALSTORAGE - mantém o carrinho visível
+                        // Dados antigos, removemos para evitar mostrar posição desatualizada
+                        console.log('⚠️ Dados do motorista antigos, removendo');
+                        localStorage.removeItem('lisboago_driver_data');
+                        return null;
                     }
                 }
             } catch (error) {
-                console.error('Erro ao ler dados do motorista:', error);
+                console.error('❌ Erro ao ler dados do motorista:', error);
             }
             return null;
         }
 
-        // Atualizar marcador do motorista no mapa
+        // Atualizar marcador do motorista no mapa - MOVIMENTO SÚBITO
         function updateDriverMarker(position) {
-            if (!map) return;
+            if (!map) {
+                console.log('❌ Mapa não disponível');
+                return;
+            }
             
             if (driverMarker) {
-                // Movimento suave para nova posição
+                // Movimento DIRETO para nova posição (sem animação)
                 driverMarker.setPosition(position);
+                // Garantir que o marcador está visível
+                driverMarker.setMap(map);
             } else {
                 // Criar novo marcador
                 driverMarker = new google.maps.Marker({
                     map: map,
                     position: position,
                     title: 'Motorista LisboaGo - Disponível',
-                    icon: getTaxiIcon()
+                    icon: getTaxiIcon(),
+                    optimized: true // Otimização do Google Maps
                 });
                 
-                console.log('Novo marcador do motorista criado');
+                console.log('🆕 Novo marcador do motorista criado na posição:', position);
             }
+            
+            // Centralizar o mapa na posição do motorista (opcional)
+            // map.setCenter(position);
         }
 
-        // Remover marcador do motorista - SÓ QUANDO PARAR RASTREAMENTO
+        // Remover marcador do motorista
         function removeDriverMarker() {
             if (driverMarker) {
                 driverMarker.setMap(null);
                 driverMarker = null;
-                console.log('Marcador do motorista removido (rastreamento parado)');
+                console.log('🗑️ Marcador do motorista removido');
             }
         }
 
         // Obter ícone do táxi
         function getTaxiIcon() {
             return {
-                url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iNiIgeT0iMTQiIHdpZHRoPSIyOCIgaGVpZ2h0PSIxNiIgcng9IjMiIGZpbGw9IiNGRjVCMDAiLz4KPHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjgiIHJ4PSIyIiBmaWxsPSIjRkY1QjAwIi8+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMzIiIHI9IjMiIGZpbGw9IiMzMzMiLz4KPGNpcmNsZSBjeD0iMjgiIGN5PSIzMiIgcj0iMyIgZpbGw9IiMzMzMiLz4KPHJlY3QgeD0iOSIgeT0iMTAiIHdpZHRoPSIyMiIgaGVpZ2h0PSI4IiBmaWxsPSIjRkZGIi8+CjxwYXRoIGQ9Ik0xMiAxN0gyOFYyN0gxMlYxN1oiIGZpbGw9IiNGRkYiLz4KPC9zdmc+',
+                url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iNiIgeT0iMTQiIHdpZHRoPSIyOCIgaGVpZ2h0PSIxNiIgcng9IjMiIGZpbGw9IiNGRjVCMDAiLz4KPHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjgiIHJ4PSIyIiBmaWxsPSIjRkY1QjAwIi8+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMzIiIHI9IjMiIGZpbGw9IiMzMzMiLz4KPGNpcmNsZSBjeD0iMjgiIGN5PSIzIiByPSIzIiBmaWxsPSIjMzMzIi8+CjxjaXJjbGUgY3g9IjI4IiBjeT0iMzIiIHI9IjMiIGZpbGw9IiMzMzMiLz4KPHJlY3QgeD0iOSIgeT0iMTAiIHdpZHRoPSIyMiIgaGVpZ2h0PSI4IiBmaWxsPSIjRkZGIi8+CjxwYXRoIGQ9Ik0xMiAxN0gyOFYyN0gxMlYxN1oiIGZpbGw9IiNGRkYiLz4KPC9zdmc+',
                 scaledSize: new google.maps.Size(50, 50),
                 anchor: new google.maps.Point(25, 25)
             };
@@ -377,7 +407,7 @@
 
         // Inicialização do mapa
         function initMap() {
-            console.log('Inicializando mapa principal...');
+            console.log('🗺️ Inicializando mapa principal...');
             
             // Configuração inicial do mapa
             const mapOptions = {
@@ -508,10 +538,10 @@
             // Inicializar autocomplete
             initAutocomplete();
 
-            // Iniciar rastreamento em tempo real
+            // Iniciar rastreamento em tempo real ULTRA-RÁPIDO
             setupRealTimeTracking();
 
-            console.log('Mapa principal inicializado com sucesso');
+            console.log('✅ Mapa principal inicializado com sucesso');
         }
         
         // Carregar a API do Google Maps
@@ -525,9 +555,19 @@
         
         // Inicializar quando a página carregar
         window.onload = function() {
-            console.log('Página inicial carregada');
+            console.log('🌐 Página inicial carregada - iniciando aplicação');
             loadGoogleMaps();
         };
+
+        // Debug: Monitorar localStorage
+        setInterval(() => {
+            const driverData = getDriverData();
+            if (driverData) {
+                console.log('📊 Monitor - Dados do motorista:', driverData.position, 'Tracking:', driverData.isTracking);
+            } else {
+                console.log('📊 Monitor - Nenhum motorista ativo');
+            }
+        }, 3000);
     </script>
 </body>
 </html>
