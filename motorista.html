@@ -206,6 +206,11 @@
             border-left-color: #DB4437;
         }
         
+        .sync-ultra {
+            background: #e3f2fd;
+            border-left-color: #1976d2;
+        }
+        
         /* Footer */
         footer {
             background: #000;
@@ -348,8 +353,8 @@
                 </div>
                 <div class="coordinates" id="address">--</div>
                 
-                <div class="sync-status" id="sync-status">
-                    Sincronização com página inicial: <span id="sync-status-text">Aguardando...</span>
+                <div class="sync-status sync-ultra" id="sync-status">
+                    🔄 Sincronização ULTRA-RÁPIDA: <span id="sync-status-text">Aguardando...</span>
                 </div>
                 
                 <button class="tracking-btn" id="tracking-btn">Iniciar Rastreamento</button>
@@ -397,8 +402,9 @@
         let updateTimer = null;
         let updateSeconds = 0;
         let lastPosition = null;
+        let syncCounter = 0;
 
-        // Função para salvar posição no localStorage (COMUNICAÇÃO COM PÁGINA INICIAL)
+        // Função para salvar posição no localStorage - VERSÃO ULTRA-RÁPIDA
         function saveDriverPositionToStorage(position) {
             const driverData = {
                 isTracking: true,
@@ -410,11 +416,20 @@
             };
             
             try {
+                // Salvar IMEDIATAMENTE sem delays
                 localStorage.setItem('lisboago_driver_data', JSON.stringify(driverData));
-                updateSyncStatus('success', 'Posição sincronizada com sucesso!');
-                console.log('Posição do motorista salva no localStorage:', driverData.position);
+                
+                // Forçar evento de storage para outras abas
+                window.dispatchEvent(new StorageEvent('storage', {
+                    key: 'lisboago_driver_data',
+                    newValue: JSON.stringify(driverData)
+                }));
+                
+                syncCounter++;
+                updateSyncStatus('ultra', `Sincronizado ${syncCounter}x - ${driverData.position.lat.toFixed(6)}, ${driverData.position.lng.toFixed(6)}`);
+                console.log('💾 Posição salva e sincronizada:', driverData.position);
             } catch (error) {
-                console.error('Erro ao salvar no localStorage:', error);
+                console.error('❌ Erro ao salvar no localStorage:', error);
                 updateSyncStatus('error', 'Erro na sincronização');
             }
         }
@@ -426,7 +441,9 @@
             
             if (syncStatus && syncStatusText) {
                 syncStatus.className = 'sync-status';
-                if (type === 'success') {
+                if (type === 'ultra') {
+                    syncStatus.classList.add('sync-ultra');
+                } else if (type === 'success') {
                     syncStatus.classList.add('sync-success');
                 } else if (type === 'error') {
                     syncStatus.classList.add('sync-error');
@@ -444,9 +461,16 @@
             }
         }
 
-        // Função para iniciar rastreamento
+        // Função para iniciar rastreamento - VERSÃO OTIMIZADA
         function startDriverTracking() {
             if (navigator.geolocation) {
+                // Configuração de alta precisão para atualizações rápidas
+                const geoOptions = {
+                    enableHighAccuracy: true,
+                    timeout: 3000, // Timeout reduzido
+                    maximumAge: 0   // Sem cache
+                };
+                
                 driverTrackingInterval = navigator.geolocation.watchPosition(
                     function(position) {
                         const pos = {
@@ -454,22 +478,25 @@
                             lng: position.coords.longitude
                         };
                         
-                        // SALVAR NO LOCALSTORAGE PARA PÁGINA INICIAL
+                        // SALVAR NO LOCALSTORAGE PARA PÁGINA INICIAL - ULTRA-RÁPIDO
                         saveDriverPositionToStorage(position);
                         
-                        // Atualizar mapa
-                        map.setCenter(pos);
-                        
-                        // Atualizar ou criar marcador
-                        if (driverMarker) {
-                            driverMarker.setPosition(pos);
-                        } else {
-                            driverMarker = new google.maps.Marker({
-                                map: map,
-                                position: pos,
-                                title: 'Sua localização atual (Rastreando)',
-                                icon: getTaxiIcon()
-                            });
+                        // Atualizar mapa local
+                        if (map) {
+                            map.setCenter(pos);
+                            
+                            // Atualizar ou criar marcador local
+                            if (driverMarker) {
+                                driverMarker.setPosition(pos);
+                            } else {
+                                driverMarker = new google.maps.Marker({
+                                    map: map,
+                                    position: pos,
+                                    title: 'Sua localização atual (Rastreando)',
+                                    icon: getTaxiIcon(),
+                                    optimized: true
+                                });
+                            }
                         }
                         
                         // Atualizar informações
@@ -481,15 +508,11 @@
                         document.getElementById('update-seconds').textContent = '0 segundos';
                     },
                     function(error) {
-                        console.error('Erro no rastreamento:', error);
+                        console.error('❌ Erro no rastreamento:', error);
                         updateSyncStatus('error', 'Erro no GPS: ' + error.message);
                         stopDriverTracking();
                     },
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 5000,
-                        maximumAge: 0
-                    }
+                    geoOptions
                 );
                 
                 isDriverTracking = true;
@@ -501,7 +524,8 @@
                 // Iniciar contador de segundos
                 startUpdateTimer();
                 
-                console.log('Rastreamento do motorista iniciado');
+                console.log('🚕 Rastreamento ULTRA-RÁPIDO iniciado');
+                updateSyncStatus('ultra', 'Sincronização ULTRA-RÁPIDA ativa!');
                 
             } else {
                 alert('Seu navegador não suporta geolocalização.');
@@ -521,19 +545,27 @@
             // LIMPAR DADOS DO LOCALSTORAGE APENAS QUANDO PARAR MANUALMENTE
             try {
                 localStorage.removeItem('lisboago_driver_data');
-                updateSyncStatus('error', 'Rastreamento parado');
+                
+                // Forçar evento de limpeza
+                window.dispatchEvent(new StorageEvent('storage', {
+                    key: 'lisboago_driver_data',
+                    newValue: null
+                }));
+                
+                updateSyncStatus('error', 'Rastreamento parado - Sincronização desativada');
             } catch (error) {
-                console.error('Erro ao limpar localStorage:', error);
+                console.error('❌ Erro ao limpar localStorage:', error);
             }
             
             isDriverTracking = false;
+            syncCounter = 0;
             document.getElementById('tracking-btn').textContent = 'Iniciar Rastreamento';
             document.getElementById('tracking-btn').classList.remove('tracking-active');
             document.getElementById('tracking-status').textContent = 'Inativo';
             document.getElementById('status-indicator').className = 'status-indicator tracking-off';
             document.getElementById('update-seconds').textContent = '-- segundos';
             
-            console.log('Rastreamento do motorista parado - localStorage limpo');
+            console.log('🛑 Rastreamento parado - localStorage limpo');
         }
 
         // Iniciar contador de atualização
@@ -571,7 +603,7 @@
         // Obter ícone do táxi
         function getTaxiIcon() {
             return {
-                url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iNiIgeT0iMTQiIHdpZHRoPSIyOCIgaGVpZ2h0PSIxNiIgcng9IjMiIGZpbGw9IiNGRjVCMDAiLz4KPHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjgiIHJ4PSIyIiBmaWxsPSIjRkY1QjAwIi8+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMzIiIHI9IjMiIGZpbGw9IiMzMzMiLz4KPGNpcmNsZSBjeD0iMjgiIGN5PSIzIiByPSIzIiBmaWxsPSIjMzMzIi8+CjxjaXJjbGUgY3g9IjI4IiBjeT0iMzIiIHI9IjMiIGZpbGw9IiMzMzMiLz4KPHJlY3QgeD0iOSIgeT0iMTAiIHdpZHRoPSIyMiIgaGVpZ2h0PSI4IiBmaWxsPSIjRkZGIi8+CjxwYXRoIGQ9Ik0xMiAxN0gyOFYyN0gxMlYxN1oiIGZpbGw9IiNGRkYiLz4KPC9zdmc+',
+                url: 'https://cdn-icons-png.flaticon.com/128/1048/1048339.png',
                 scaledSize: new google.maps.Size(50, 50),
                 anchor: new google.maps.Point(25, 25)
             };
@@ -613,7 +645,7 @@
                 google.maps.event.trigger(map, 'resize');
             });
             
-            console.log('Mapa do motorista inicializado');
+            console.log('🗺️ Mapa do motorista inicializado - Sistema ULTRA-RÁPIDO');
         }
         
         // Carregar a API do Google Maps
@@ -627,7 +659,7 @@
         
         // Inicializar quando a página carregar
         window.onload = function() {
-            console.log('Página do motorista carregada');
+            console.log('🌐 Página do motorista carregada - Sistema ULTRA-RÁPIDO');
             loadGoogleMaps();
             
             // Verificar se já estava rastreando
@@ -636,13 +668,20 @@
                 if (existingData) {
                     const data = JSON.parse(existingData);
                     if (data.isTracking) {
-                        updateSyncStatus('success', 'Rastreamento anterior detectado');
+                        updateSyncStatus('ultra', 'Rastreamento anterior detectado - Pronto para sincronizar!');
                     }
                 }
             } catch (error) {
-                console.error('Erro ao verificar rastreamento anterior:', error);
+                console.error('❌ Erro ao verificar rastreamento anterior:', error);
             }
         };
+
+        // Debug: Monitorar performance
+        setInterval(() => {
+            if (isDriverTracking) {
+                console.log('📊 Performance - Sincronizações:', syncCounter, 'Tempo ativo:', updateSeconds + 's');
+            }
+        }, 5000);
     </script>
 </body>
 </html>
