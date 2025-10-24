@@ -354,7 +354,7 @@
                 <div class="coordinates" id="address">--</div>
                 
                 <div class="sync-status sync-ultra" id="sync-status">
-                    🔄 Sincronização ULTRA-RÁPIDA: <span id="sync-status-text">Aguardando...</span>
+                    🔄 Sincronização GLOBAL: <span id="sync-status-text">Aguardando...</span>
                 </div>
                 
                 <button class="tracking-btn" id="tracking-btn">Iniciar Rastreamento</button>
@@ -404,7 +404,7 @@
         let lastPosition = null;
         let syncCounter = 0;
 
-        // Função para salvar posição no localStorage - VERSÃO ULTRA-RÁPIDA
+        // Função para salvar posição no localStorage - VERSÃO GLOBAL
         function saveDriverPositionToStorage(position) {
             const driverData = {
                 isTracking: true,
@@ -412,11 +412,12 @@
                     lat: position.coords.latitude,
                     lng: position.coords.longitude
                 },
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                driverId: 'motorista_mega' // ID único do motorista
             };
             
             try {
-                // Salvar IMEDIATAMENTE sem delays
+                // Salvar no localStorage
                 localStorage.setItem('lisboago_driver_data', JSON.stringify(driverData));
                 
                 // Forçar evento de storage para outras abas
@@ -427,7 +428,7 @@
                 
                 syncCounter++;
                 updateSyncStatus('ultra', `Sincronizado ${syncCounter}x - ${driverData.position.lat.toFixed(6)}, ${driverData.position.lng.toFixed(6)}`);
-                console.log('💾 Posição salva e sincronizada:', driverData.position);
+                console.log('💾 Posição salva GLOBALMENTE:', driverData.position);
             } catch (error) {
                 console.error('❌ Erro ao salvar no localStorage:', error);
                 updateSyncStatus('error', 'Erro na sincronização');
@@ -461,14 +462,13 @@
             }
         }
 
-        // Função para iniciar rastreamento - VERSÃO OTIMIZADA
+        // Função para iniciar rastreamento
         function startDriverTracking() {
             if (navigator.geolocation) {
-                // Configuração de alta precisão para atualizações rápidas
                 const geoOptions = {
                     enableHighAccuracy: true,
-                    timeout: 3000, // Timeout reduzido
-                    maximumAge: 0   // Sem cache
+                    timeout: 5000,
+                    maximumAge: 0
                 };
                 
                 driverTrackingInterval = navigator.geolocation.watchPosition(
@@ -478,14 +478,13 @@
                             lng: position.coords.longitude
                         };
                         
-                        // SALVAR NO LOCALSTORAGE PARA PÁGINA INICIAL - ULTRA-RÁPIDO
+                        // SALVAR NO LOCALSTORAGE PARA TODOS OS DISPOSITIVOS
                         saveDriverPositionToStorage(position);
                         
                         // Atualizar mapa local
                         if (map) {
                             map.setCenter(pos);
                             
-                            // Atualizar ou criar marcador local
                             if (driverMarker) {
                                 driverMarker.setPosition(pos);
                             } else {
@@ -524,8 +523,8 @@
                 // Iniciar contador de segundos
                 startUpdateTimer();
                 
-                console.log('🚕 Rastreamento ULTRA-RÁPIDO iniciado');
-                updateSyncStatus('ultra', 'Sincronização ULTRA-RÁPIDA ativa!');
+                console.log('🚕 Rastreamento GLOBAL iniciado');
+                updateSyncStatus('ultra', 'Sincronização GLOBAL ativa!');
                 
             } else {
                 alert('Seu navegador não suporta geolocalização.');
@@ -542,7 +541,7 @@
                 clearInterval(updateTimer);
             }
             
-            // LIMPAR DADOS DO LOCALSTORAGE APENAS QUANDO PARAR MANUALMENTE
+            // LIMPAR DADOS DO LOCALSTORAGE
             try {
                 localStorage.removeItem('lisboago_driver_data');
                 
@@ -600,7 +599,7 @@
             });
         }
 
-        // Obter ícone do táxi
+        // Obter ícone do táxi - ATUALIZADO
         function getTaxiIcon() {
             return {
                 url: 'https://cdn-icons-png.flaticon.com/128/1048/1048339.png',
@@ -613,7 +612,7 @@
         function initMap() {
             // Configuração inicial do mapa
             const mapOptions = {
-                center: { lat: 38.7223, lng: -9.1393 }, // Lisboa como localização inicial
+                center: { lat: 38.7223, lng: -9.1393 },
                 zoom: 12,
                 mapTypeId: google.maps.MapTypeId.ROADMAP,
                 fullscreenControl: true,
@@ -634,7 +633,6 @@
             // Botão de logout
             logoutBtn.addEventListener('click', function() {
                 if (confirm('Deseja sair da área do motorista?')) {
-                    // Parar rastreamento antes de sair
                     stopDriverTracking();
                     window.location.href = 'index.html';
                 }
@@ -645,7 +643,7 @@
                 google.maps.event.trigger(map, 'resize');
             });
             
-            console.log('🗺️ Mapa do motorista inicializado - Sistema ULTRA-RÁPIDO');
+            console.log('🗺️ Mapa do motorista inicializado - Sistema GLOBAL');
         }
         
         // Carregar a API do Google Maps
@@ -659,7 +657,7 @@
         
         // Inicializar quando a página carregar
         window.onload = function() {
-            console.log('🌐 Página do motorista carregada - Sistema ULTRA-RÁPIDO');
+            console.log('🌐 Página do motorista carregada - Sistema GLOBAL');
             loadGoogleMaps();
             
             // Verificar se já estava rastreando
@@ -675,13 +673,6 @@
                 console.error('❌ Erro ao verificar rastreamento anterior:', error);
             }
         };
-
-        // Debug: Monitorar performance
-        setInterval(() => {
-            if (isDriverTracking) {
-                console.log('📊 Performance - Sincronizações:', syncCounter, 'Tempo ativo:', updateSeconds + 's');
-            }
-        }, 5000);
     </script>
 </body>
 </html>
