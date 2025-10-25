@@ -369,7 +369,7 @@
         let currentRoute = null;
 
         // =============================================
-        // SISTEMA DE RASTREAMENTO EM TEMPO REAL - GLOBAL
+        // SISTEMA DE RASTREAMENTO EM TEMPO REAL - CORRIGIDO
         // =============================================
         
         function setupRealTimeTracking() {
@@ -383,8 +383,8 @@
             // Verificar status inicial IMEDIATAMENTE
             checkDriverStatus();
             
-            // Verificar a cada 2 segundos para tempo real
-            positionUpdateInterval = setInterval(checkDriverStatus, 2000);
+            // Verificar a cada 1 segundo para tempo real mais rápido
+            positionUpdateInterval = setInterval(checkDriverStatus, 1000);
             
             // Event listener para mudanças no localStorage (INSTANTÂNEO)
             window.addEventListener('storage', function(e) {
@@ -411,7 +411,7 @@
             console.log('✅ Sistema de rastreamento global inicializado');
         }
 
-        // Verificar status do motorista - VERSÃO OTIMIZADA
+        // VERIFICAÇÃO DO STATUS DO MOTORISTA - VERSÃO CORRIGIDA
         function checkDriverStatus() {
             const driverData = getDriverData();
             
@@ -421,67 +421,72 @@
                 console.log('📍 Dados do motorista recebidos:', {
                     position: newPosition,
                     tracking: driverData.isTracking,
-                    driver: driverData.driverName || 'Motorista'
+                    driver: driverData.driverName || 'Motorista',
+                    timestamp: new Date(driverData.timestamp).toLocaleTimeString()
                 });
                 
-                // ATUALIZAR SEMPRE que houver dados válidos de rastreamento
+                // SEMPRE ATUALIZAR quando houver dados válidos - mesmo se posição não mudou
+                // Isso garante que o carrinho fique visível continuamente
                 updateDriverMarker(newPosition);
                 updateDriverStatus(true);
                 
-                // Apenas log se a posição mudou
+                // Apenas log se a posição mudou significativamente
                 if (!lastDriverPosition || 
-                    lastDriverPosition.lat !== newPosition.lat || 
-                    lastDriverPosition.lng !== newPosition.lng) {
+                    Math.abs(lastDriverPosition.lat - newPosition.lat) > 0.0001 || 
+                    Math.abs(lastDriverPosition.lng - newPosition.lng) > 0.0001) {
                     
                     lastDriverPosition = newPosition;
-                    console.log('🔄 Posição atualizada:', newPosition);
+                    console.log('🔄 Posição SIGNIFICATIVAMENTE atualizada:', newPosition);
                 }
+                
             } else {
-                // SÓ REMOVER SE O MOTORISTA NÃO ESTIVER RASTREANDO
-                if (!driverData || !driverData.isTracking) {
+                // SÓ REMOVER SE EXPLICITAMENTE O MOTORISTA PAROU O RASTREAMENTO
+                // Não remove por dados antigos ou por sair da página
+                if (driverData === null) {
+                    // Dados completamente ausentes - motorista nunca rastreou
                     if (driverMarker) {
                         removeDriverMarker();
                         lastDriverPosition = null;
                         updateDriverStatus(false);
-                        console.log('❌ Motorista parou o rastreamento - removendo carrinho');
+                        console.log('❌ Nenhum dado de motorista encontrado');
                     }
-                } else if (driverData && driverData.isTracking) {
-                    // Motorista ainda está rastreando, mas dados podem estar antigos
-                    // MANTER O MARCADOR VISÍVEL mesmo com dados antigos
-                    console.log('⚠️ Dados antigos, mas motorista ainda está rastreando - mantendo carrinho');
-                    updateDriverStatus(true);
+                } else if (driverData && driverData.isTracking === false) {
+                    // Motorista explicitamente parou o rastreamento
+                    if (driverMarker) {
+                        removeDriverMarker();
+                        lastDriverPosition = null;
+                        updateDriverStatus(false);
+                        console.log('❌ Motorista PAROU explicitamente o rastreamento');
+                    }
                 }
+                // Se driverData existe mas isTracking é true, mantém o carrinho mesmo com dados antigos
             }
         }
 
-        // Obter dados do motorista do localStorage - VERSÃO ROBUSTA
+        // OBTER DADOS DO MOTORISTA - VERSÃO MAIS PERMISSIVA
         function getDriverData() {
             try {
                 const data = localStorage.getItem('lisboago_driver_data');
                 if (data) {
                     const driverData = JSON.parse(data);
                     
-                    // Verificar se os dados são válidos e recentes (menos de 30 segundos)
-                    const now = Date.now();
-                    const dataAge = now - driverData.timestamp;
-                    
-                    if (dataAge < 30000 && driverData.isTracking && driverData.position) {
+                    // VERIFICAR APENAS SE O MOTORISTA ESTÁ RASTREANDO
+                    // Não remover por dados antigos - deixa o motorista controlar isso
+                    if (driverData.isTracking && driverData.position) {
                         return driverData;
-                    } else {
-                        console.log('⚠️ Dados do motorista antigos:', {
-                            age: Math.round(dataAge/1000) + ' segundos',
-                            limite: '30 segundos'
-                        });
-                        return null;
+                    } else if (driverData.isTracking === false) {
+                        // Motorista explicitamente parou
+                        return { isTracking: false };
                     }
                 }
+                return null; // Nenhum dado encontrado
             } catch (error) {
                 console.error('❌ Erro ao ler dados do motorista:', error);
+                return null;
             }
-            return null;
         }
 
-        // Atualizar marcador do motorista no mapa - VERSÃO COMPLETA
+        // ATUALIZAR MARCADOR DO MOTORISTA - VERSÃO ROBUSTA
         function updateDriverMarker(position) {
             if (!map) {
                 console.log('❌ Mapa não disponível para atualizar marcador');
@@ -489,9 +494,9 @@
             }
             
             if (driverMarker) {
-                // Atualizar posição existente com movimento suave
+                // Atualizar posição existente
                 driverMarker.setPosition(position);
-                // GARANTIR que o marcador está visível
+                // GARANTIR ABSOLUTAMENTE que o marcador está visível
                 driverMarker.setMap(map);
                 console.log('🔄 Marcador atualizado para:', position);
             } else {
@@ -501,25 +506,14 @@
                     position: position,
                     title: 'Motorista LisboaGo - Disponível',
                     icon: getTaxiIcon(),
-                    optimized: true,
-                    animation: google.maps.Animation.BOUNCE // Animação para chamar atenção
+                    optimized: true
                 });
-
-                // Parar animação depois de 2 segundos
-                setTimeout(() => {
-                    if (driverMarker) {
-                        driverMarker.setAnimation(null);
-                    }
-                }, 2000);
                 
-                console.log('🆕 Novo marcador do motorista criado na posição:', position);
+                console.log('🆕 NOVO MARCADOR criado na posição:', position);
             }
-            
-            // Centralizar o mapa na posição do motorista (opcional)
-            // map.setCenter(position);
         }
 
-        // Atualizar status visual do motorista
+        // ATUALIZAR STATUS VISUAL DO MOTORISTA
         function updateDriverStatus(isOnline) {
             if (!driverStatusElement) {
                 driverStatusElement = document.getElementById('driver-status');
@@ -534,25 +528,20 @@
                     driverStatusElement.style.display = 'block';
                     driverStatusElement.className = 'driver-status driver-offline';
                     document.getElementById('driver-status-text').textContent = '❌ Nenhum motorista disponível';
-                    
-                    // Esconder após 3 segundos se offline
-                    setTimeout(() => {
-                        driverStatusElement.style.display = 'none';
-                    }, 3000);
                 }
             }
         }
 
-        // Remover marcador do motorista
+        // REMOVER MARCADOR DO MOTORISTA
         function removeDriverMarker() {
             if (driverMarker) {
                 driverMarker.setMap(null);
                 driverMarker = null;
-                console.log('🗑️ Marcador do motorista removido');
+                console.log('🗑️ Marcador do motorista REMOVIDO');
             }
         }
 
-        // Obter ícone do táxi
+        // OBTER ÍCONE DO TÁXI
         function getTaxiIcon() {
             return {
                 url: 'https://cdn-icons-png.flaticon.com/128/1048/1048339.png',
@@ -565,7 +554,6 @@
         // SISTEMA DE ROTAS E NAVEGAÇÃO
         // =============================================
 
-        // Calcular rota entre origem e destino
         function calculateRoute(origin, destination) {
             if (!directionsService || !directionsRenderer) return;
             
@@ -817,30 +805,29 @@
             // Verificar se há motorista ativo ao carregar a página
             setTimeout(() => {
                 const driverData = getDriverData();
-                if (driverData) {
+                if (driverData && driverData.isTracking) {
                     console.log('🚕 Motorista ativo detectado ao carregar página:', driverData.position);
+                    updateDriverMarker(driverData.position);
                     updateDriverStatus(true);
                 }
-            }, 1000);
+            }, 2000);
         };
 
         // =============================================
         // DEBUG E MONITORAMENTO
         // =============================================
         
-        // Monitorar status do motorista a cada 10 segundos
+        // Monitorar status do motorista a cada 5 segundos
         setInterval(() => {
             const driverData = getDriverData();
-            if (driverData) {
+            if (driverData && driverData.isTracking) {
                 console.log('📊 Monitor - Motorista ATIVO:', {
                     position: driverData.position,
                     tracking: driverData.isTracking,
                     age: Math.round((Date.now() - driverData.timestamp)/1000) + ' segundos'
                 });
-            } else {
-                console.log('📊 Monitor - Nenhum motorista ativo no momento');
             }
-        }, 10000);
+        }, 5000);
     </script>
 </body>
 </html>
