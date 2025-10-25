@@ -109,20 +109,53 @@
         }
         
         .route-details {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 10px;
         }
         
-        .route-time {
-            font-size: 18px;
-            font-weight: bold;
-            color: #000;
+        .route-item {
+            text-align: center;
         }
         
-        .route-distance {
-            font-size: 16px;
+        .route-label {
+            font-size: 12px;
             color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .route-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1976d2;
+        }
+        
+        .route-price {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #0F9D58;
+            margin-top: 5px;
+        }
+        
+        /* Distância do motorista */
+        .driver-distance {
+            position: absolute;
+            top: 280px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            width: 90%;
+            max-width: 500px;
+            display: none;
+            text-align: center;
+            font-size: 14px;
+            border-left: 4px solid #FFD700;
         }
         
         /* Botão Chame LisboaGo */
@@ -241,6 +274,10 @@
                 top: 180px;
             }
             
+            .driver-distance {
+                top: 250px;
+            }
+            
             .call-taxi-section {
                 bottom: 20px;
             }
@@ -282,9 +319,21 @@
     <!-- Informações da rota -->
     <div class="route-info" id="route-info">
         <div class="route-details">
-            <div class="route-time" id="route-time">-- min</div>
-            <div class="route-distance" id="route-distance">-- km</div>
+            <div class="route-item">
+                <div class="route-label">Tempo da Corrida</div>
+                <div class="route-value" id="route-time">-- min</div>
+            </div>
+            <div class="route-item">
+                <div class="route-label">Distância Total</div>
+                <div class="route-value" id="route-distance">-- km</div>
+            </div>
         </div>
+        <div class="route-price" id="route-price">-- €</div>
+    </div>
+
+    <!-- Distância do motorista -->
+    <div class="driver-distance" id="driver-distance">
+        🚕 Motorista a <span id="driver-time">-- min</span> • <span id="driver-dist">-- km</span> de você
     </div>
     
     <!-- Botão Chame LisboaGo -->
@@ -322,9 +371,10 @@
         let originMarker = null;
         let destinationMarker = null;
         let currentRoute = null;
+        let clientPosition = null;
 
         // =============================================
-        // SISTEMA DE RASTREAMENTO EM TEMPO REAL - CORRIGIDO
+        // SISTEMA DE RASTREAMENTO EM TEMPO REAL
         // =============================================
         
         function setupRealTimeTracking() {
@@ -355,32 +405,23 @@
                 checkDriverStatus();
             });
 
-            // Verificar quando a página fica visível
-            document.addEventListener('visibilitychange', function() {
-                if (!document.hidden) {
-                    console.log('👀 Página visível - verificando motorista');
-                    checkDriverStatus();
-                }
-            });
-            
             console.log('✅ Sistema de rastreamento inicializado');
         }
 
-        // VERIFICAÇÃO DO STATUS DO MOTORISTA - VERSÃO CORRIGIDA
+        // VERIFICAÇÃO DO STATUS DO MOTORISTA
         function checkDriverStatus() {
             const driverData = getDriverData();
             
             if (driverData && driverData.isTracking && driverData.position) {
                 const newPosition = driverData.position;
                 
-                console.log('📍 Dados do motorista recebidos:', {
-                    position: newPosition,
-                    tracking: driverData.isTracking,
-                    timestamp: new Date(driverData.timestamp).toLocaleTimeString()
-                });
-                
-                // SEMPRE ATUALIZAR quando houver dados válidos
+                // ATUALIZAR MARCADOR DO MOTORISTA
                 updateDriverMarker(newPosition);
+                
+                // CALCULAR DISTÂNCIA ENTRE MOTORISTA E CLIENTE
+                if (clientPosition) {
+                    calculateDriverDistance(newPosition, clientPosition);
+                }
                 
                 // Apenas log se a posição mudou significativamente
                 if (!lastDriverPosition || 
@@ -388,41 +429,31 @@
                     Math.abs(lastDriverPosition.lng - newPosition.lng) > 0.0001) {
                     
                     lastDriverPosition = newPosition;
-                    console.log('🔄 Posição atualizada:', newPosition);
+                    console.log('🔄 Posição do motorista atualizada:', newPosition);
                 }
                 
             } else {
                 // SÓ REMOVER SE EXPLICITAMENTE O MOTORISTA PAROU O RASTREAMENTO
-                if (driverData === null) {
-                    // Dados completamente ausentes
+                if (driverData && driverData.isTracking === false) {
                     if (driverMarker) {
                         removeDriverMarker();
                         lastDriverPosition = null;
-                        console.log('❌ Nenhum dado de motorista encontrado');
-                    }
-                } else if (driverData && driverData.isTracking === false) {
-                    // Motorista explicitamente parou o rastreamento
-                    if (driverMarker) {
-                        removeDriverMarker();
-                        lastDriverPosition = null;
+                        document.getElementById('driver-distance').style.display = 'none';
                         console.log('❌ Motorista PAROU explicitamente o rastreamento');
                     }
                 }
             }
         }
 
-        // OBTER DADOS DO MOTORISTA - VERSÃO MAIS PERMISSIVA
+        // OBTER DADOS DO MOTORISTA
         function getDriverData() {
             try {
                 const data = localStorage.getItem('lisboago_driver_data');
                 if (data) {
                     const driverData = JSON.parse(data);
-                    
-                    // VERIFICAR APENAS SE O MOTORISTA ESTÁ RASTREANDO
                     if (driverData.isTracking && driverData.position) {
                         return driverData;
                     } else if (driverData.isTracking === false) {
-                        // Motorista explicitamente parou
                         return { isTracking: false };
                     }
                 }
@@ -433,20 +464,14 @@
             }
         }
 
-        // ATUALIZAR MARCADOR DO MOTORISTA - VERSÃO ROBUSTA
+        // ATUALIZAR MARCADOR DO MOTORISTA
         function updateDriverMarker(position) {
-            if (!map) {
-                console.log('❌ Mapa não disponível para atualizar marcador');
-                return;
-            }
+            if (!map) return;
             
             if (driverMarker) {
-                // Atualizar posição existente
                 driverMarker.setPosition(position);
-                // GARANTIR que o marcador está visível
                 driverMarker.setMap(map);
             } else {
-                // Criar novo marcador
                 driverMarker = new google.maps.Marker({
                     map: map,
                     position: position,
@@ -455,8 +480,34 @@
                     optimized: true
                 });
                 
-                console.log('🆕 NOVO MARCADOR criado na posição:', position);
+                console.log('🆕 Marcador do motorista criado:', position);
             }
+        }
+
+        // CALCULAR DISTÂNCIA ENTRE MOTORISTA E CLIENTE
+        function calculateDriverDistance(driverPos, clientPos) {
+            if (!directionsService) return;
+            
+            const request = {
+                origin: driverPos,
+                destination: clientPos,
+                travelMode: google.maps.TravelMode.DRIVING
+            };
+            
+            directionsService.route(request, function(result, status) {
+                if (status == google.maps.DirectionsStatus.OK) {
+                    const route = result.routes[0].legs[0];
+                    const duration = route.duration.text;
+                    const distance = route.distance.text;
+                    
+                    // Atualizar informações de distância do motorista
+                    document.getElementById('driver-time').textContent = duration;
+                    document.getElementById('driver-dist').textContent = distance;
+                    document.getElementById('driver-distance').style.display = 'block';
+                    
+                    console.log('📏 Distância do motorista:', { duration, distance });
+                }
+            });
         }
 
         // REMOVER MARCADOR DO MOTORISTA
@@ -464,7 +515,7 @@
             if (driverMarker) {
                 driverMarker.setMap(null);
                 driverMarker = null;
-                console.log('🗑️ Marcador do motorista REMOVIDO');
+                console.log('🗑️ Marcador do motorista removido');
             }
         }
 
@@ -474,6 +525,68 @@
                 url: 'https://cdn-icons-png.flaticon.com/128/1048/1048339.png',
                 scaledSize: new google.maps.Size(50, 50),
                 anchor: new google.maps.Point(25, 25)
+            };
+        }
+
+        // OBTER ÍCONE DO CLIENTE (BONEQUINHO)
+        function getClientIcon() {
+            return {
+                url: 'https://cdn-icons-png.flaticon.com/128/7324/7324835.png',
+                scaledSize: new google.maps.Size(40, 40),
+                anchor: new google.maps.Point(20, 20)
+            };
+        }
+
+        // =============================================
+        // SISTEMA DE CÁLCULO DE PREÇOS
+        // =============================================
+
+        // VERIFICAR SE É FIM DE SEMANA OU FERIADO EM PORTUGAL
+        function isWeekendOrHoliday() {
+            const now = new Date();
+            const portugalTime = new Date(now.toLocaleString("en-US", {timeZone: "Europe/Lisbon"}));
+            const day = portugalTime.getDay();
+            
+            // Fim de semana: Sábado (6) ou Domingo (0)
+            if (day === 0 || day === 6) {
+                return true;
+            }
+            
+            // Aqui você pode adicionar feriados específicos de Portugal
+            // Por enquanto, retornamos false para dias de semana
+            return false;
+        }
+
+        // CALCULAR PREÇO DA CORRIDA
+        function calculatePrice(distanceInKm) {
+            // Tarifas conforme solicitado
+            const baseRateWeekday = 3.25;
+            const baseRateWeekend = 3.90;
+            const perKmRate = 0.90;
+            const minRate = 3.25;
+            
+            // Verificar se é fim de semana/feriado
+            const isWeekend = isWeekendOrHoliday();
+            const baseRate = isWeekend ? baseRateWeekend : baseRateWeekday;
+            
+            console.log('💰 Calculando preço:', {
+                distancia: distanceInKm + ' km',
+                dia: isWeekend ? 'Fim de semana' : 'Dia útil',
+                taxaBase: baseRate + ' €'
+            });
+            
+            // Calcular preço
+            let price = baseRate + (distanceInKm * perKmRate);
+            
+            // Garantir valor mínimo
+            if (price < minRate) {
+                price = minRate;
+            }
+            
+            return {
+                price: price.toFixed(2),
+                baseRate: baseRate,
+                isWeekend: isWeekend
             };
         }
 
@@ -499,23 +612,33 @@
                     const route = result.routes[0].legs[0];
                     const duration = route.duration.text;
                     const distance = route.distance.text;
+                    const distanceInKm = parseFloat(route.distance.text.replace(' km', '').replace(',', '.'));
                     
-                    // Atualizar informações da rota (APENAS tempo e distância)
+                    // CALCULAR PREÇO COM NOVO SISTEMA
+                    const priceInfo = calculatePrice(distanceInKm);
+                    
+                    // Atualizar informações da rota
                     document.getElementById('route-time').textContent = duration;
                     document.getElementById('route-distance').textContent = distance;
+                    document.getElementById('route-price').textContent = priceInfo.price + ' €';
                     document.getElementById('route-info').style.display = 'block';
                     
                     console.log('🗺️ Rota calculada:', { 
                         duration, 
-                        distance
+                        distance,
+                        price: priceInfo.price + ' €',
+                        tipo: priceInfo.isWeekend ? 'Fim de semana' : 'Dia útil'
                     });
                     
-                    // Salvar dados da rota no localStorage para a página de chamar táxi
+                    // Salvar dados da rota no localStorage
                     const routeData = {
                         origin: origin,
                         destination: destination,
                         duration: duration,
                         distance: distance,
+                        price: priceInfo.price,
+                        isWeekend: priceInfo.isWeekend,
+                        baseRate: priceInfo.baseRate,
                         timestamp: Date.now()
                     };
                     localStorage.setItem('lisboago_route_data', JSON.stringify(routeData));
@@ -590,7 +713,10 @@
                         return;
                     }
                     
-                    // Adicionar/atualizar marcador de origem
+                    // SALVAR POSIÇÃO DO CLIENTE
+                    clientPosition = originPlace.geometry.location;
+                    
+                    // Adicionar/atualizar marcador de origem (BONEQUINHO)
                     if (originMarker) {
                         originMarker.setMap(null);
                     }
@@ -598,17 +724,20 @@
                     originMarker = new google.maps.Marker({
                         map: map,
                         position: originPlace.geometry.location,
-                        title: 'Origem: ' + originPlace.name,
-                        icon: {
-                            url: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-                            scaledSize: new google.maps.Size(30, 30),
-                            anchor: new google.maps.Point(15, 15)
-                        }
+                        title: 'Sua localização',
+                        icon: getClientIcon(),
+                        optimized: true
                     });
                     
                     // Se destino também estiver preenchido, calcular rota
                     if (destinationPlace) {
                         calculateRoute(originPlace.geometry.location, destinationPlace.geometry.location);
+                    }
+                    
+                    // Se houver motorista ativo, calcular distância
+                    const driverData = getDriverData();
+                    if (driverData && driverData.isTracking) {
+                        calculateDriverDistance(driverData.position, clientPosition);
                     }
                 });
                 
@@ -681,6 +810,7 @@
                     destination: destinationBox.value,
                     originPlace: originPlace,
                     destinationPlace: destinationPlace,
+                    clientPosition: clientPosition,
                     timestamp: Date.now()
                 };
                 localStorage.setItem('lisboago_current_ride', JSON.stringify(currentData));
