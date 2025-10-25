@@ -264,6 +264,46 @@
             display: none;
         }
         
+        /* Estilo para a linha de conexão */
+        .connection-line-container {
+            position: absolute;
+            z-index: 500;
+            pointer-events: none;
+        }
+        
+        .connection-line {
+            position: absolute;
+            background-color: #888;
+            height: 2px;
+            transform-origin: 0 0;
+            z-index: 500;
+        }
+        
+        .connection-arrow {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 12px solid #888;
+            transform-origin: center;
+            z-index: 500;
+        }
+        
+        .connection-time-box {
+            position: absolute;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            white-space: nowrap;
+            z-index: 500;
+            transform: translate(-50%, -50%);
+        }
+        
         @media (max-width: 768px) {
             .search-panel {
                 top: 70px;
@@ -372,6 +412,9 @@
         let destinationMarker = null;
         let currentRoute = null;
         let clientPosition = null;
+        let connectionLine = null;
+        let connectionArrow = null;
+        let connectionTimeBox = null;
 
         // =============================================
         // SISTEMA DE RASTREAMENTO EM TEMPO REAL
@@ -421,6 +464,9 @@
                 // CALCULAR DISTÂNCIA ENTRE MOTORISTA E CLIENTE
                 if (clientPosition) {
                     calculateDriverDistance(newPosition, clientPosition);
+                    
+                    // ATUALIZAR LINHA DE CONEXÃO
+                    updateConnectionLine(newPosition, clientPosition);
                 }
                 
                 // Apenas log se a posição mudou significativamente
@@ -437,12 +483,142 @@
                 if (driverData && driverData.isTracking === false) {
                     if (driverMarker) {
                         removeDriverMarker();
+                        removeConnectionLine();
                         lastDriverPosition = null;
                         document.getElementById('driver-distance').style.display = 'none';
                         console.log('❌ Motorista PAROU explicitamente o rastreamento');
                     }
                 }
             }
+        }
+
+        // ATUALIZAR LINHA DE CONEXÃO ENTRE MOTORISTA E CLIENTE
+        function updateConnectionLine(driverPos, clientPos) {
+            if (!map) return;
+            
+            // Converter posições para pixels no mapa
+            const driverPoint = map.getProjection().fromLatLngToPoint(
+                new google.maps.LatLng(driverPos.lat, driverPos.lng)
+            );
+            const clientPoint = map.getProjection().fromLatLngToPoint(
+                new google.maps.LatLng(clientPos.lat(), clientPos.lng())
+            );
+            
+            // Calcular distância e ângulo
+            const dx = clientPoint.x - driverPoint.x;
+            const dy = clientPoint.y - driverPoint.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            // Ponto médio para posicionar a caixa de tempo
+            const midPoint = {
+                x: driverPoint.x + dx * 0.5,
+                y: driverPoint.y + dy * 0.5
+            };
+            
+            // Converter de volta para LatLng
+            const midLatLng = map.getProjection().fromPointToLatLng(
+                new google.maps.Point(midPoint.x, midPoint.y)
+            );
+            
+            // Criar ou atualizar a linha de conexão
+            if (!connectionLine) {
+                connectionLine = document.createElement('div');
+                connectionLine.className = 'connection-line';
+                document.body.appendChild(connectionLine);
+                
+                connectionArrow = document.createElement('div');
+                connectionArrow.className = 'connection-arrow';
+                document.body.appendChild(connectionArrow);
+                
+                connectionTimeBox = document.createElement('div');
+                connectionTimeBox.className = 'connection-time-box';
+                document.body.appendChild(connectionTimeBox);
+            }
+            
+            // Posicionar e estilizar a linha
+            const driverPixel = getPixelPosition(driverPos);
+            const clientPixel = getPixelPosition({
+                lat: clientPos.lat(),
+                lng: clientPos.lng()
+            });
+            
+            const lineLength = Math.sqrt(
+                Math.pow(clientPixel.x - driverPixel.x, 2) + 
+                Math.pow(clientPixel.y - driverPixel.y, 2)
+            );
+            
+            const lineAngle = Math.atan2(
+                clientPixel.y - driverPixel.y, 
+                clientPixel.x - driverPixel.x
+            ) * 180 / Math.PI;
+            
+            // Atualizar linha
+            connectionLine.style.width = lineLength + 'px';
+            connectionLine.style.left = driverPixel.x + 'px';
+            connectionLine.style.top = driverPixel.y + 'px';
+            connectionLine.style.transform = `rotate(${lineAngle}deg)`;
+            
+            // Atualizar seta (no meio da linha)
+            const arrowPos = {
+                x: driverPixel.x + (clientPixel.x - driverPixel.x) * 0.7,
+                y: driverPixel.y + (clientPixel.y - driverPixel.y) * 0.7
+            };
+            
+            connectionArrow.style.left = arrowPos.x + 'px';
+            connectionArrow.style.top = arrowPos.y + 'px';
+            connectionArrow.style.transform = `rotate(${lineAngle}deg)`;
+            
+            // Atualizar caixa de tempo (no meio da linha)
+            const timePos = {
+                x: driverPixel.x + (clientPixel.x - driverPixel.x) * 0.5,
+                y: driverPixel.y + (clientPixel.y - driverPixel.y) * 0.5
+            };
+            
+            connectionTimeBox.style.left = timePos.x + 'px';
+            connectionTimeBox.style.top = timePos.y + 'px';
+            
+            // Atualizar texto do tempo
+            const driverTimeElement = document.getElementById('driver-time');
+            if (driverTimeElement) {
+                connectionTimeBox.textContent = driverTimeElement.textContent;
+            }
+        }
+
+        // REMOVER LINHA DE CONEXÃO
+        function removeConnectionLine() {
+            if (connectionLine) {
+                connectionLine.remove();
+                connectionLine = null;
+            }
+            if (connectionArrow) {
+                connectionArrow.remove();
+                connectionArrow = null;
+            }
+            if (connectionTimeBox) {
+                connectionTimeBox.remove();
+                connectionTimeBox = null;
+            }
+        }
+
+        // OBTER POSIÇÃO EM PIXELS NO MAPA
+        function getPixelPosition(latLng) {
+            const latLngObj = new google.maps.LatLng(latLng.lat, latLng.lng);
+            const projection = map.getProjection();
+            const bounds = map.getBounds();
+            
+            if (!projection || !bounds) return { x: 0, y: 0 };
+            
+            const topRight = projection.fromLatLngToPoint(bounds.getNorthEast());
+            const bottomLeft = projection.fromLatLngToPoint(bounds.getSouthWest());
+            const scale = Math.pow(2, map.getZoom());
+            
+            const worldPoint = projection.fromLatLngToPoint(latLngObj);
+            
+            return {
+                x: (worldPoint.x - bottomLeft.x) * scale,
+                y: (worldPoint.y - topRight.y) * scale
+            };
         }
 
         // OBTER DADOS DO MOTORISTA
@@ -738,6 +914,7 @@
                     const driverData = getDriverData();
                     if (driverData && driverData.isTracking) {
                         calculateDriverDistance(driverData.position, clientPosition);
+                        updateConnectionLine(driverData.position, clientPosition);
                     }
                 });
                 
@@ -821,6 +998,12 @@
             // Ajustar o mapa quando a janela for redimensionada
             window.addEventListener('resize', function() {
                 google.maps.event.trigger(map, 'resize');
+                
+                // Atualizar posição da linha de conexão
+                const driverData = getDriverData();
+                if (driverData && driverData.isTracking && clientPosition) {
+                    updateConnectionLine(driverData.position, clientPosition);
+                }
             });
             
             // Inicializar autocomplete
