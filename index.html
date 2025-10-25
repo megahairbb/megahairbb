@@ -139,25 +139,6 @@
             margin-top: 5px;
         }
         
-        /* Distância do motorista */
-        .driver-distance {
-            position: absolute;
-            top: 280px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 12px 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            width: 90%;
-            max-width: 500px;
-            display: none;
-            text-align: center;
-            font-size: 14px;
-            border-left: 4px solid #FFD700;
-        }
-        
         /* Botão Chame LisboaGo */
         .call-taxi-section {
             position: absolute;
@@ -264,44 +245,19 @@
             display: none;
         }
         
-        /* Estilo para a linha de conexão */
-        .connection-line-container {
-            position: absolute;
-            z-index: 500;
-            pointer-events: none;
-        }
-        
-        .connection-line {
-            position: absolute;
-            background-color: #888;
-            height: 2px;
-            transform-origin: 0 0;
-            z-index: 500;
-        }
-        
-        .connection-arrow {
-            position: absolute;
-            width: 0;
-            height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-top: 12px solid #888;
-            transform-origin: center;
-            z-index: 500;
-        }
-        
-        .connection-time-box {
+        /* Caixa de tempo do motorista */
+        .driver-time-box {
             position: absolute;
             background: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
             font-weight: bold;
             color: #333;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             white-space: nowrap;
             z-index: 500;
-            transform: translate(-50%, -50%);
+            border: 1px solid #ddd;
         }
         
         @media (max-width: 768px) {
@@ -312,10 +268,6 @@
             
             .route-info {
                 top: 180px;
-            }
-            
-            .driver-distance {
-                top: 250px;
             }
             
             .call-taxi-section {
@@ -370,11 +322,6 @@
         </div>
         <div class="route-price" id="route-price">-- €</div>
     </div>
-
-    <!-- Distância do motorista -->
-    <div class="driver-distance" id="driver-distance">
-        🚕 Motorista a <span id="driver-time">-- min</span> • <span id="driver-dist">-- km</span> de você
-    </div>
     
     <!-- Botão Chame LisboaGo -->
     <div class="call-taxi-section">
@@ -408,13 +355,12 @@
         let positionUpdateInterval = null;
         let directionsService = null;
         let directionsRenderer = null;
+        let driverToClientRenderer = null;
         let originMarker = null;
         let destinationMarker = null;
         let currentRoute = null;
         let clientPosition = null;
-        let connectionLine = null;
-        let connectionArrow = null;
-        let connectionTimeBox = null;
+        let driverTimeBox = null;
 
         // =============================================
         // SISTEMA DE RASTREAMENTO EM TEMPO REAL
@@ -461,12 +407,9 @@
                 // ATUALIZAR MARCADOR DO MOTORISTA
                 updateDriverMarker(newPosition);
                 
-                // CALCULAR DISTÂNCIA ENTRE MOTORISTA E CLIENTE
+                // CALCULAR ROTA ENTRE MOTORISTA E CLIENTE
                 if (clientPosition) {
-                    calculateDriverDistance(newPosition, clientPosition);
-                    
-                    // ATUALIZAR LINHA DE CONEXÃO
-                    updateConnectionLine(newPosition, clientPosition);
+                    calculateDriverToClientRoute(newPosition, clientPosition);
                 }
                 
                 // Apenas log se a posição mudou significativamente
@@ -483,121 +426,90 @@
                 if (driverData && driverData.isTracking === false) {
                     if (driverMarker) {
                         removeDriverMarker();
-                        removeConnectionLine();
+                        removeDriverToClientRoute();
                         lastDriverPosition = null;
-                        document.getElementById('driver-distance').style.display = 'none';
                         console.log('❌ Motorista PAROU explicitamente o rastreamento');
                     }
                 }
             }
         }
 
-        // ATUALIZAR LINHA DE CONEXÃO ENTRE MOTORISTA E CLIENTE
-        function updateConnectionLine(driverPos, clientPos) {
-            if (!map) return;
+        // CALCULAR ROTA CINZA ENTRE MOTORISTA E CLIENTE
+        function calculateDriverToClientRoute(driverPos, clientPos) {
+            if (!directionsService) return;
             
-            // Converter posições para pixels no mapa
-            const driverPoint = map.getProjection().fromLatLngToPoint(
-                new google.maps.LatLng(driverPos.lat, driverPos.lng)
-            );
-            const clientPoint = map.getProjection().fromLatLngToPoint(
-                new google.maps.LatLng(clientPos.lat(), clientPos.lng())
-            );
-            
-            // Calcular distância e ângulo
-            const dx = clientPoint.x - driverPoint.x;
-            const dy = clientPoint.y - driverPoint.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-            
-            // Ponto médio para posicionar a caixa de tempo
-            const midPoint = {
-                x: driverPoint.x + dx * 0.5,
-                y: driverPoint.y + dy * 0.5
+            const request = {
+                origin: driverPos,
+                destination: clientPos,
+                travelMode: google.maps.TravelMode.DRIVING
             };
             
-            // Converter de volta para LatLng
-            const midLatLng = map.getProjection().fromPointToLatLng(
-                new google.maps.Point(midPoint.x, midPoint.y)
-            );
-            
-            // Criar ou atualizar a linha de conexão
-            if (!connectionLine) {
-                connectionLine = document.createElement('div');
-                connectionLine.className = 'connection-line';
-                document.body.appendChild(connectionLine);
-                
-                connectionArrow = document.createElement('div');
-                connectionArrow.className = 'connection-arrow';
-                document.body.appendChild(connectionArrow);
-                
-                connectionTimeBox = document.createElement('div');
-                connectionTimeBox.className = 'connection-time-box';
-                document.body.appendChild(connectionTimeBox);
-            }
-            
-            // Posicionar e estilizar a linha
-            const driverPixel = getPixelPosition(driverPos);
-            const clientPixel = getPixelPosition({
-                lat: clientPos.lat(),
-                lng: clientPos.lng()
+            directionsService.route(request, function(result, status) {
+                if (status == google.maps.DirectionsStatus.OK) {
+                    // Renderizar rota cinza
+                    if (!driverToClientRenderer) {
+                        driverToClientRenderer = new google.maps.DirectionsRenderer({
+                            map: map,
+                            suppressMarkers: true,
+                            preserveViewport: false,
+                            polylineOptions: {
+                                strokeColor: '#888',
+                                strokeOpacity: 0.7,
+                                strokeWeight: 4,
+                                zIndex: 1
+                            }
+                        });
+                    }
+                    
+                    driverToClientRenderer.setDirections(result);
+                    
+                    // Extrair informações da rota
+                    const route = result.routes[0].legs[0];
+                    const duration = route.duration.text;
+                    
+                    // Atualizar caixa de tempo do motorista
+                    updateDriverTimeBox(driverPos, duration);
+                    
+                    console.log('🛣️ Rota motorista-cliente atualizada:', { duration });
+                    
+                } else {
+                    console.error('❌ Erro ao calcular rota motorista-cliente:', status);
+                }
             });
-            
-            const lineLength = Math.sqrt(
-                Math.pow(clientPixel.x - driverPixel.x, 2) + 
-                Math.pow(clientPixel.y - driverPixel.y, 2)
-            );
-            
-            const lineAngle = Math.atan2(
-                clientPixel.y - driverPixel.y, 
-                clientPixel.x - driverPixel.x
-            ) * 180 / Math.PI;
-            
-            // Atualizar linha
-            connectionLine.style.width = lineLength + 'px';
-            connectionLine.style.left = driverPixel.x + 'px';
-            connectionLine.style.top = driverPixel.y + 'px';
-            connectionLine.style.transform = `rotate(${lineAngle}deg)`;
-            
-            // Atualizar seta (no meio da linha)
-            const arrowPos = {
-                x: driverPixel.x + (clientPixel.x - driverPixel.x) * 0.7,
-                y: driverPixel.y + (clientPixel.y - driverPixel.y) * 0.7
-            };
-            
-            connectionArrow.style.left = arrowPos.x + 'px';
-            connectionArrow.style.top = arrowPos.y + 'px';
-            connectionArrow.style.transform = `rotate(${lineAngle}deg)`;
-            
-            // Atualizar caixa de tempo (no meio da linha)
-            const timePos = {
-                x: driverPixel.x + (clientPixel.x - driverPixel.x) * 0.5,
-                y: driverPixel.y + (clientPixel.y - driverPixel.y) * 0.5
-            };
-            
-            connectionTimeBox.style.left = timePos.x + 'px';
-            connectionTimeBox.style.top = timePos.y + 'px';
-            
-            // Atualizar texto do tempo
-            const driverTimeElement = document.getElementById('driver-time');
-            if (driverTimeElement) {
-                connectionTimeBox.textContent = driverTimeElement.textContent;
-            }
         }
 
-        // REMOVER LINHA DE CONEXÃO
-        function removeConnectionLine() {
-            if (connectionLine) {
-                connectionLine.remove();
-                connectionLine = null;
+        // ATUALIZAR CAIXA DE TEMPO DO MOTORISTA
+        function updateDriverTimeBox(driverPos, duration) {
+            if (!map) return;
+            
+            // Converter posição do motorista para pixels
+            const driverPixel = getPixelPosition(driverPos);
+            
+            // Criar ou atualizar caixa de tempo
+            if (!driverTimeBox) {
+                driverTimeBox = document.createElement('div');
+                driverTimeBox.className = 'driver-time-box';
+                driverTimeBox.textContent = `🚕 ${duration}`;
+                document.body.appendChild(driverTimeBox);
+            } else {
+                driverTimeBox.textContent = `🚕 ${duration}`;
             }
-            if (connectionArrow) {
-                connectionArrow.remove();
-                connectionArrow = null;
+            
+            // Posicionar caixa acima do motorista
+            driverTimeBox.style.left = (driverPixel.x - driverTimeBox.offsetWidth / 2) + 'px';
+            driverTimeBox.style.top = (driverPixel.y - 70) + 'px';
+        }
+
+        // REMOVER ROTA MOTORISTA-CLIENTE
+        function removeDriverToClientRoute() {
+            if (driverToClientRenderer) {
+                driverToClientRenderer.setMap(null);
+                driverToClientRenderer = null;
             }
-            if (connectionTimeBox) {
-                connectionTimeBox.remove();
-                connectionTimeBox = null;
+            
+            if (driverTimeBox) {
+                driverTimeBox.remove();
+                driverTimeBox = null;
             }
         }
 
@@ -658,32 +570,13 @@
                 
                 console.log('🆕 Marcador do motorista criado:', position);
             }
-        }
-
-        // CALCULAR DISTÂNCIA ENTRE MOTORISTA E CLIENTE
-        function calculateDriverDistance(driverPos, clientPos) {
-            if (!directionsService) return;
             
-            const request = {
-                origin: driverPos,
-                destination: clientPos,
-                travelMode: google.maps.TravelMode.DRIVING
-            };
-            
-            directionsService.route(request, function(result, status) {
-                if (status == google.maps.DirectionsStatus.OK) {
-                    const route = result.routes[0].legs[0];
-                    const duration = route.duration.text;
-                    const distance = route.distance.text;
-                    
-                    // Atualizar informações de distância do motorista
-                    document.getElementById('driver-time').textContent = duration;
-                    document.getElementById('driver-dist').textContent = distance;
-                    document.getElementById('driver-distance').style.display = 'block';
-                    
-                    console.log('📏 Distância do motorista:', { duration, distance });
-                }
-            });
+            // Atualizar posição da caixa de tempo
+            if (driverTimeBox && clientPosition) {
+                const driverPixel = getPixelPosition(position);
+                driverTimeBox.style.left = (driverPixel.x - driverTimeBox.offsetWidth / 2) + 'px';
+                driverTimeBox.style.top = (driverPixel.y - 70) + 'px';
+            }
         }
 
         // REMOVER MARCADOR DO MOTORISTA
@@ -850,7 +743,12 @@
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer({
                 map: map,
-                suppressMarkers: true
+                suppressMarkers: true,
+                polylineOptions: {
+                    strokeColor: '#1976d2',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 5
+                }
             });
             
             // Elementos da interface
@@ -910,11 +808,10 @@
                         calculateRoute(originPlace.geometry.location, destinationPlace.geometry.location);
                     }
                     
-                    // Se houver motorista ativo, calcular distância
+                    // Se houver motorista ativo, calcular rota motorista-cliente
                     const driverData = getDriverData();
                     if (driverData && driverData.isTracking) {
-                        calculateDriverDistance(driverData.position, clientPosition);
-                        updateConnectionLine(driverData.position, clientPosition);
+                        calculateDriverToClientRoute(driverData.position, clientPosition);
                     }
                 });
                 
@@ -999,10 +896,14 @@
             window.addEventListener('resize', function() {
                 google.maps.event.trigger(map, 'resize');
                 
-                // Atualizar posição da linha de conexão
+                // Atualizar posição da caixa de tempo
                 const driverData = getDriverData();
-                if (driverData && driverData.isTracking && clientPosition) {
-                    updateConnectionLine(driverData.position, clientPosition);
+                if (driverData && driverData.isTracking) {
+                    const driverPixel = getPixelPosition(driverData.position);
+                    if (driverTimeBox) {
+                        driverTimeBox.style.left = (driverPixel.x - driverTimeBox.offsetWidth / 2) + 'px';
+                        driverTimeBox.style.top = (driverPixel.y - 70) + 'px';
+                    }
                 }
             });
             
