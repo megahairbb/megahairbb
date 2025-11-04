@@ -15,6 +15,7 @@
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
+            -webkit-text-size-adjust: 100%;
         }
         
         body, html {
@@ -59,12 +60,14 @@
             background: #DB4437;
             color: white;
             border: none;
-            padding: 8px 15px;
+            padding: 10px 16px;
             border-radius: 20px;
             font-weight: 600;
             cursor: pointer;
             font-size: 12px;
             white-space: nowrap;
+            min-height: 40px;
+            touch-action: manipulation;
         }
         
         .logout-btn:active {
@@ -156,7 +159,7 @@
         }
         
         .tracking-btn {
-            padding: 16px 20px;
+            padding: 18px 20px;
             border: none;
             border-radius: 25px;
             background: #0F9D58;
@@ -167,6 +170,8 @@
             transition: all 0.2s ease;
             width: 100%;
             margin-top: 10px;
+            min-height: 60px;
+            touch-action: manipulation;
         }
         
         .tracking-btn:active {
@@ -396,7 +401,7 @@
             }
             
             .logout-btn {
-                padding: 6px 12px;
+                padding: 8px 12px;
                 font-size: 11px;
             }
             
@@ -405,7 +410,7 @@
             }
             
             .tracking-btn {
-                padding: 14px 15px;
+                padding: 16px 15px;
                 font-size: 14px;
             }
         }
@@ -418,7 +423,7 @@
         }
         
         input, select, textarea {
-            font-size: 16px; /* Prevenir zoom no iOS */
+            font-size: 16px;
         }
     </style>
 </head>
@@ -855,6 +860,7 @@
             const trackingBtn = document.getElementById('tracking-btn');
             const logoutBtn = document.getElementById('logout-btn');
             
+            // Melhorar sensibilidade dos botões
             trackingBtn.addEventListener('click', function() {
                 toggleTracking();
             });
