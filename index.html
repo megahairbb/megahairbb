@@ -293,53 +293,6 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        /* Safe Areas para iPhone */
-        @supports (padding: max(0px)) {
-            .call-taxi-section {
-                bottom: max(20px, env(safe-area-inset-bottom));
-            }
-            
-            header {
-                padding-top: max(12px, env(safe-area-inset-top));
-            }
-        }
-        
-        /* Versão Desktop */
-        @media (min-width: 1025px) {
-            .search-panel {
-                left: 20px;
-                right: auto;
-                width: 400px;
-                top: 80px;
-            }
-            
-            .route-info {
-                left: 20px;
-                right: auto;
-                width: 400px;
-                top: 200px;
-            }
-            
-            .call-taxi-section {
-                left: 20px;
-                right: auto;
-                width: 400px;
-            }
-            
-            .logo h1 {
-                font-size: 22px;
-            }
-            
-            .logo p {
-                font-size: 12px;
-            }
-            
-            .driver-area-btn {
-                font-size: 14px;
-                padding: 10px 20px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -437,54 +390,30 @@
         let clientPosition = null;
         let firebaseListener = null;
         let isCalculatingRoute = false;
-        let lastUpdateTime = 0;
-        const UPDATE_INTERVAL = 2000; // Atualizar a cada 2 segundos
 
         // =============================================
-        // FUNÇÕES MOBILE
-        // =============================================
-
-        function showLoading() {
-            document.getElementById('loading').style.display = 'block';
-        }
-
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
-
-        function vibrate() {
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
-            }
-        }
-
-        // =============================================
-        // SISTEMA FIREBASE - ESCUTA EM TEMPO REAL
+        // SISTEMA FIREBASE - ESCUTA CONTÍNUA
         // =============================================
 
         function setupFirebaseListener() {
             console.log('👂 Iniciando escuta Firebase em tempo real...');
             
             try {
+                // ESCUTAR TODOS OS MOTORISTAS ATIVOS - SEM FILTRO DE TEMPO
                 firebaseListener = db.collection('drivers')
-                    .where('isTracking', '==', true)
                     .onSnapshot(function(snapshot) {
-                        const now = Date.now();
-                        
-                        // Prevenir atualizações muito rápidas
-                        if (now - lastUpdateTime < UPDATE_INTERVAL) {
-                            return;
-                        }
-                        
                         snapshot.docChanges().forEach(function(change) {
                             if (change.type === 'added' || change.type === 'modified') {
                                 const driverData = change.doc.data();
                                 
+                                // VERIFICAR SE O MOTORISTA ESTÁ ATIVO
                                 if (driverData.isTracking && driverData.position) {
                                     const newPosition = driverData.position;
                                     
+                                    console.log('📍 Motorista ativo detectado:', driverData.driverName, newPosition);
+                                    
                                     const positionChanged = !lastDriverPosition || 
-                                        getDistance(lastDriverPosition, newPosition) > 1; // Reduzido para 1 metro
+                                        getDistance(lastDriverPosition, newPosition) > 1;
                                     
                                     if (positionChanged) {
                                         console.log('📍 FIREBASE - Posição atualizada:', newPosition);
@@ -496,18 +425,18 @@
                                         }
                                         
                                         lastDriverPosition = newPosition;
-                                        lastUpdateTime = now;
                                     }
                                 }
                             } else if (change.type === 'removed') {
+                                console.log('🚫 Motorista removido do Firebase');
                                 removeDriverMarker();
                                 removeDriverToClientRoute();
                             }
                         });
                     }, function(error) {
                         console.error('❌ Erro na escuta Firebase:', error);
-                        // Tentar reconectar após 5 segundos
-                        setTimeout(setupFirebaseListener, 5000);
+                        // Tentar reconectar após 3 segundos
+                        setTimeout(setupFirebaseListener, 3000);
                     });
                     
             } catch (error) {
@@ -523,7 +452,7 @@
         }
 
         // =============================================
-        // FUNÇÕES DO MAPA (OTIMIZADAS PARA MOBILE)
+        // FUNÇÕES DO MAPA
         // =============================================
 
         function updateDriverMarker(newPosition) {
@@ -542,6 +471,8 @@
                     icon: getTaxiIcon(),
                     optimized: true
                 });
+                
+                console.log('🚕 Marcador do motorista criado no mapa');
             }
         }
 
@@ -597,6 +528,7 @@
             if (driverMarker) {
                 driverMarker.setMap(null);
                 driverMarker = null;
+                console.log('🚫 Marcador do motorista removido');
             }
         }
 
@@ -617,7 +549,7 @@
         }
 
         // =============================================
-        // SISTEMA DE ROTAS (OTIMIZADO PARA MOBILE)
+        // SISTEMA DE ROTAS
         // =============================================
 
         function calculateRoute(origin, destination) {
@@ -665,7 +597,7 @@
         }
 
         // =============================================
-        // INICIALIZAÇÃO DO MAPA (OTIMIZADA PARA MOBILE)
+        // INICIALIZAÇÃO DO MAPA
         // =============================================
 
         function initMap() {
@@ -800,7 +732,7 @@
                 });
             }
             
-            // EVENT LISTENERS OTIMIZADOS PARA TOUCH
+            // EVENT LISTENERS
             driverAreaBtn.addEventListener('click', function() {
                 vibrate();
                 loginModal.style.display = 'flex';
@@ -823,7 +755,13 @@
                 // Logins válidos
                 if ((username === 'Mega' && password === '12345') || 
                     (username === 'Heitor' && password === '12345')) {
-                    window.location.href = 'motorista.html';
+                    
+                    // Redirecionar para a página do motorista com parâmetro
+                    if (username === 'Heitor') {
+                        window.location.href = 'motorista.html?user=heitor';
+                    } else {
+                        window.location.href = 'motorista.html';
+                    }
                 } else {
                     errorMessage.style.display = 'block';
                 }
@@ -875,10 +813,10 @@
             loadGoogleMaps();
         };
 
-        // GESTÃO DE RECURSOS - MELHORADA
+        // GESTÃO DE RECURSOS
         window.addEventListener('visibilitychange', function() {
             if (document.hidden) {
-                console.log('📱 Página em segundo plano - mantendo Firebase ativo');
+                console.log('📱 Página em segundo plano - Firebase continua ativo');
             } else {
                 console.log('📱 Página em primeiro plano');
             }
@@ -891,14 +829,6 @@
                 setupFirebaseListener();
             }
         });
-
-        // PREVENIR SCROLL EM INPUTS - CORRIGIDO
-        document.addEventListener('touchstart', function(e) {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-                // Permitir foco mas prevenir scroll
-                e.target.focus();
-            }
-        }, { passive: true });
     </script>
 </body>
 </html>
