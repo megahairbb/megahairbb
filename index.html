@@ -93,33 +93,34 @@
         
         .search-input {
             width: 100%;
-            padding: 14px 15px;
+            padding: 16px 15px;
             border: 1px solid #ddd;
             border-radius: 10px;
             font-size: 16px;
             margin-bottom: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             -webkit-appearance: none;
-            min-height: 48px;
+            min-height: 52px;
             line-height: 20px;
+            touch-action: manipulation;
         }
         
         /* Melhorias para campos de entrada em mobile */
         input, textarea, select {
-            font-size: 16px !important; /* Prevenir zoom no iOS */
+            font-size: 16px !important;
             touch-action: manipulation;
         }
         
         /* Aumentar área de toque para campos em mobile */
         @media (max-width: 768px) {
             .search-input {
-                padding: 16px 15px;
-                min-height: 52px;
+                padding: 18px 15px;
+                min-height: 56px;
             }
             
             .driver-area-btn {
-                padding: 10px 16px;
-                min-height: 40px;
+                padding: 12px 18px;
+                min-height: 44px;
             }
         }
         
@@ -236,17 +237,18 @@
         
         .form-group input {
             width: 100%;
-            padding: 15px;
+            padding: 16px;
             border: 1px solid #ddd;
             border-radius: 10px;
             font-size: 16px;
             -webkit-appearance: none;
-            min-height: 48px;
+            min-height: 52px;
+            touch-action: manipulation;
         }
         
         .login-btn {
             width: 100%;
-            padding: 15px;
+            padding: 16px;
             background: #000;
             color: white;
             border: none;
@@ -255,7 +257,7 @@
             font-weight: 600;
             cursor: pointer;
             margin-top: 10px;
-            min-height: 50px;
+            min-height: 54px;
         }
         
         .login-btn:active {
@@ -460,7 +462,7 @@
     <!-- Botão Chame LisboaGo -->
     <div class="call-taxi-section">
         <button class="btn-call-taxi" id="call-taxi-btn">
-            🚕 Chamar LisboaGo
+            🚕 Chamar LisboaGo - €0,50
         </button>
     </div>
     
@@ -741,8 +743,7 @@
                     // Salvar dados da rota para usar na página de chamar táxi
                     const routeData = {
                         duration: duration,
-                        distance: distance,
-                        price: calculateRidePrice(distance)
+                        distance: distance
                     };
                     localStorage.setItem('lisboago_route_data', JSON.stringify(routeData));
                     
@@ -753,34 +754,6 @@
                     alert('Não foi possível calcular a rota. Verifique os endereços.');
                 }
             });
-        }
-        
-        function calculateRidePrice(distanceText) {
-            try {
-                // Extrair número da distância (ex: "5.2 km" -> 5.2)
-                const distanceMatch = distanceText.match(/(\d+\.?\d*)/);
-                if (!distanceMatch) return '--';
-                
-                const distance = parseFloat(distanceMatch[1]);
-                
-                // Tarifas da LisboaGo
-                const baseRate = 2.50; // Taxa base
-                const perKmRate = 1.50; // Por km
-                const minRate = 5.00; // Valor mínimo
-                
-                // Calcular preço
-                let price = baseRate + (distance * perKmRate);
-                
-                // Garantir valor mínimo
-                if (price < minRate) {
-                    price = minRate;
-                }
-                
-                return price.toFixed(2);
-            } catch (error) {
-                console.error('❌ Erro ao calcular preço:', error);
-                return '--';
-            }
         }
 
         // =============================================
@@ -846,6 +819,15 @@
                     types: ['geocode'],
                     componentRestrictions: { country: 'pt' },
                     fields: ['geometry', 'name']
+                });
+                
+                // Adicionar evento de clique direto para melhor sensibilidade
+                searchBox.addEventListener('click', function() {
+                    this.focus();
+                });
+                
+                destinationBox.addEventListener('click', function() {
+                    this.focus();
                 });
                 
                 autocompleteOrigin.addListener('place_changed', function() {
