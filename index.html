@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LisboaGo - Seu Táxi em Lisboa</title>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -261,6 +266,67 @@
             display: none;
         }
         
+        /* Status do motorista */
+        .driver-status {
+            position: absolute;
+            top: 150px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            max-width: 300px;
+            display: none;
+        }
+        
+        .driver-status.active {
+            display: block;
+            background: rgba(15, 157, 88, 0.9);
+        }
+        
+        .driver-status.inactive {
+            display: block;
+            background: rgba(219, 68, 55, 0.9);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-active {
+            background-color: #4CAF50;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .status-inactive {
+            background-color: #DB4437;
+        }
+        
+        .firebase-status {
+            position: absolute;
+            top: 190px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(255, 193, 7, 0.9);
+            color: black;
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            max-width: 300px;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
         @media (max-width: 768px) {
             .search-panel {
                 top: 70px;
@@ -290,6 +356,20 @@
             
             .debug-panel {
                 display: none !important;
+            }
+            
+            .driver-status {
+                top: 140px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+            
+            .firebase-status {
+                top: 180px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
             }
         }
     </style>
@@ -335,6 +415,17 @@
         </button>
     </div>
     
+    <!-- Status do motorista -->
+    <div class="driver-status" id="driver-status">
+        <span class="status-indicator" id="status-indicator"></span>
+        <span id="driver-status-text">Motorista não disponível</span>
+    </div>
+    
+    <!-- Status Firebase -->
+    <div class="firebase-status" id="firebase-status">
+        🔥 Firebase: Conectando...
+    </div>
+    
     <!-- Modal de login -->
     <div class="modal" id="login-modal">
         <div class="modal-content">
@@ -363,7 +454,23 @@
 
     <script>
         // =============================================
-        // SISTEMA GLOBAL DE RASTREAMENTO - CORRIGIDO
+        // CONFIGURAÇÃO FIREBASE - SUAS CREDENCIAIS REAIS
+        // =============================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyB2ljIwjmbPF1vfCgth4bLd3d7hhLdxKIk",
+            authDomain: "lisboago-app.firebaseapp.com",
+            projectId: "lisboago-app",
+            storageBucket: "lisboago-app.firebasestorage.app",
+            messagingSenderId: "467502556237",
+            appId: "1:467502556237:web:ff0074a42a664f7efba804"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // =============================================
+        // SISTEMA GLOBAL DE RASTREAMENTO - COM FIREBASE
         // =============================================
         
         // Variáveis globais
@@ -382,168 +489,192 @@
         let lastDriverDataString = '';
         let driverAnimation = null;
         let debugEnabled = true;
+        let driverActive = false;
+        let firebaseListener = null;
 
         // =============================================
-        // SISTEMA DE SINCRONIZAÇÃO ROBUSTO
+        // SISTEMA FIREBASE - ESCUTA EM TEMPO REAL
+        // =============================================
+
+        function setupFirebaseListener() {
+            console.log('👂 Iniciando escuta Firebase em tempo real...');
+            
+            try {
+                // Escutar mudanças no documento do motorista
+                firebaseListener = db.collection('drivers').doc('motorista_mega')
+                    .onSnapshot(function(doc) {
+                        if (doc.exists) {
+                            const driverData = doc.data();
+                            console.log('🔥 Dados recebidos do Firebase:', driverData);
+                            
+                            if (driverData.isTracking && driverData.position) {
+                                const newPosition = driverData.position;
+                                
+                                // Verificar se a posição mudou significativamente
+                                const positionChanged = !lastDriverPosition || 
+                                    getDistance(lastDriverPosition, newPosition) > 2;
+                                
+                                if (positionChanged) {
+                                    console.log(`📍 FIREBASE - Posição atualizada:`, {
+                                        lat: newPosition.lat.toFixed(6),
+                                        lng: newPosition.lng.toFixed(6)
+                                    });
+                                    
+                                    // ATUALIZAR MARCADOR DO MOTORISTA
+                                    updateDriverMarker(newPosition);
+                                    
+                                    // CALCULAR ROTA ENTRE MOTORISTA E CLIENTE
+                                    if (clientPosition) {
+                                        calculateDriverToClientRoute(newPosition, clientPosition);
+                                    }
+                                    
+                                    lastDriverPosition = newPosition;
+                                }
+                                
+                                // Atualizar status do motorista
+                                if (!driverActive) {
+                                    driverActive = true;
+                                    updateDriverStatus(true);
+                                }
+                                
+                                updateFirebaseStatus('Conectado - Motorista ativo');
+                                
+                            } else {
+                                // Motorista não está ativo
+                                if (driverActive) {
+                                    driverActive = false;
+                                    updateDriverStatus(false);
+                                }
+                                removeDriverMarker();
+                                removeDriverToClientRoute();
+                                updateFirebaseStatus('Conectado - Motorista inativo');
+                            }
+                        } else {
+                            console.log('❌ Motorista não encontrado no Firebase');
+                            updateDriverStatus(false);
+                            updateFirebaseStatus('Motorista não encontrado');
+                        }
+                    }, function(error) {
+                        console.error('❌ Erro na escuta Firebase:', error);
+                        updateFirebaseStatus('Erro de conexão');
+                        // Fallback para localStorage
+                        setupRealTimeTracking();
+                    });
+                    
+                console.log('✅ Escuta Firebase configurada com sucesso');
+                
+            } catch (error) {
+                console.error('❌ Erro ao configurar Firebase:', error);
+                updateFirebaseStatus('Erro de configuração');
+            }
+        }
+
+        // ATUALIZAR STATUS DO FIREBASE NA INTERFACE
+        function updateFirebaseStatus(message) {
+            const firebaseStatus = document.getElementById('firebase-status');
+            if (firebaseStatus) {
+                firebaseStatus.textContent = '🔥 Firebase: ' + message;
+                
+                if (message.includes('Erro') || message.includes('não encontrado')) {
+                    firebaseStatus.style.background = 'rgba(219, 68, 55, 0.9)';
+                    firebaseStatus.style.color = 'white';
+                } else if (message.includes('Conectado')) {
+                    firebaseStatus.style.background = 'rgba(15, 157, 88, 0.9)';
+                    firebaseStatus.style.color = 'white';
+                } else {
+                    firebaseStatus.style.background = 'rgba(255, 193, 7, 0.9)';
+                    firebaseStatus.style.color = 'black';
+                }
+            }
+        }
+
+        // PARAR ESCUTA FIREBASE
+        function stopFirebaseListener() {
+            if (firebaseListener) {
+                firebaseListener();
+                firebaseListener = null;
+                console.log('🔇 Escuta Firebase parada');
+            }
+        }
+
+        // =============================================
+        // SISTEMA DE SINCRONIZAÇÃO (FALLBACK)
         // =============================================
         
         function setupRealTimeTracking() {
-            console.log('🚕 INICIANDO SISTEMA GLOBAL DE RASTREAMENTO...');
+            console.log('🔄 Iniciando sistema fallback (localStorage)...');
             
-            // Mostrar painel de debug
-            if (debugEnabled) {
-                document.getElementById('debug-panel').style.display = 'block';
-            }
-            
-            // Limpar intervalos anteriores se existirem
             if (positionUpdateInterval) {
                 clearInterval(positionUpdateInterval);
             }
             
-            // Verificar status inicial IMEDIATAMENTE
             checkDriverStatus();
+            positionUpdateInterval = setInterval(checkDriverStatus, 1000);
             
-            // Sistema de polling mais agressivo
-            positionUpdateInterval = setInterval(checkDriverStatus, 800);
-            
-            // Sistema de polling adicional para localStorage
-            setupStoragePolling();
-            
-            // Event listener para mudanças no localStorage
             window.addEventListener('storage', function(e) {
                 if (e.key === 'lisboago_driver_data') {
-                    console.log('📡 EVENTO STORAGE DETECTADO - Atualizando posição do motorista');
-                    updateDebugInfo('storage', 'Evento storage detectado');
                     checkDriverStatus();
                 }
             });
-            
-            // Verificar quando a página ganha foco
-            window.addEventListener('focus', function() {
-                console.log('🔄 Página em foco - verificando motorista');
-                updateDebugInfo('focus', 'Página em foco');
-                checkDriverStatus();
-            });
-
-            // Verificar também quando a visibilidade da página muda
-            document.addEventListener('visibilitychange', function() {
-                if (!document.hidden) {
-                    console.log('👀 Página visível - verificando motorista');
-                    updateDebugInfo('visibility', 'Página visível');
-                    checkDriverStatus();
-                }
-            });
-
-            console.log('✅ Sistema global de rastreamento inicializado');
-            updateDebugInfo('system', 'Sistema iniciado');
         }
 
-        // SISTEMA DE POLLING ROBUSTO
-        function setupStoragePolling() {
-            console.log('🔍 Iniciando polling robusto (500ms)');
-            
-            setInterval(() => {
-                const currentDriverData = localStorage.getItem('lisboago_driver_data');
-                
-                if (currentDriverData !== lastDriverDataString) {
-                    lastDriverDataString = currentDriverData;
-                    if (currentDriverData) {
-                        console.log('🔄 Polling detectou mudança nos dados');
-                        updateDebugInfo('polling', 'Dados alterados');
-                        checkDriverStatus();
-                    }
-                }
-            }, 500);
-        }
-
-        // ATUALIZAR INFORMAÇÕES DE DEBUG
-        function updateDebugInfo(type, message) {
-            if (!debugEnabled) return;
-            
-            const debugStatus = document.getElementById('debug-status');
-            const debugDriver = document.getElementById('debug-driver');
-            const debugPosition = document.getElementById('debug-position');
-            const debugUpdated = document.getElementById('debug-updated');
-            
-            if (debugStatus) debugStatus.textContent = message;
-            
-            const driverData = getDriverData();
-            if (driverData) {
-                if (debugDriver) debugDriver.textContent = driverData.isTracking ? 'ATIVO' : 'INATIVO';
-                if (driverData.position && debugPosition) {
-                    debugPosition.textContent = `${driverData.position.lat.toFixed(4)}, ${driverData.position.lng.toFixed(4)}`;
-                }
-                if (debugUpdated) {
-                    const age = Math.round((Date.now() - driverData.timestamp)/1000);
-                    debugUpdated.textContent = `${age}s atrás`;
-                }
-            }
-        }
-
-        // VERIFICAÇÃO DO STATUS DO MOTORISTA - CORRIGIDA
+        // VERIFICAÇÃO DO STATUS DO MOTORISTA (FALLBACK)
         function checkDriverStatus() {
-            driverDataCheckCount++;
             const driverData = getDriverData();
             
             if (driverData && driverData.isTracking && driverData.position) {
                 const newPosition = driverData.position;
-                
-                // Verificar se a posição mudou significativamente
                 const positionChanged = !lastDriverPosition || 
-                    getDistance(lastDriverPosition, newPosition) > 5; // Só atualizar se mudou mais de 5 metros
+                    getDistance(lastDriverPosition, newPosition) > 2;
                 
                 if (positionChanged) {
-                    console.log(`📍 [${driverDataCheckCount}] POSIÇÃO ATUALIZADA:`, {
-                        lat: newPosition.lat.toFixed(6),
-                        lng: newPosition.lng.toFixed(6),
-                        distance: lastDriverPosition ? getDistance(lastDriverPosition, newPosition).toFixed(1) + 'm' : 'N/A',
-                        age: Math.round((Date.now() - driverData.timestamp)/1000) + 's'
-                    });
-                    
-                    updateDebugInfo('position', `Posição atualizada #${driverDataCheckCount}`);
-                    
-                    // ATUALIZAR MARCADOR DO MOTORISTA
                     updateDriverMarker(newPosition);
                     
-                    // CALCULAR ROTA ENTRE MOTORISTA E CLIENTE
                     if (clientPosition) {
                         calculateDriverToClientRoute(newPosition, clientPosition);
                     }
                     
+                    if (!driverActive) {
+                        driverActive = true;
+                        updateDriverStatus(true);
+                    }
+                    
                     lastDriverPosition = newPosition;
                 }
-                
             } else {
-                // Motorista não está ativo
-                if (!driverData) {
-                    if (driverDataCheckCount > 2) { // Aguardar 2 verificações
-                        removeDriverMarker();
-                        removeDriverToClientRoute();
-                        updateDebugInfo('error', 'Motorista não encontrado');
-                        console.log(`❌ [${driverDataCheckCount}] Motorista não encontrado após ${driverDataCheckCount} verificações`);
-                    }
-                } else if (driverData.isTracking === false) {
-                    removeDriverMarker();
-                    removeDriverToClientRoute();
-                    updateDebugInfo('status', 'Motorista parou');
-                    console.log(`❌ Motorista parou o rastreamento`);
+                if (driverActive) {
+                    driverActive = false;
+                    updateDriverStatus(false);
                 }
             }
         }
 
-        // ATUALIZAR MARCADOR DO MOTORISTA - VERSÃO SIMPLIFICADA
-        function updateDriverMarker(newPosition) {
-            if (!map) {
-                console.log('❌ Mapa não disponível para atualizar marcador');
-                return;
+        // ATUALIZAR STATUS DO MOTORISTA NA INTERFACE
+        function updateDriverStatus(isActive) {
+            const driverStatus = document.getElementById('driver-status');
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('driver-status-text');
+            
+            if (isActive) {
+                driverStatus.className = 'driver-status active';
+                statusIndicator.className = 'status-indicator status-active';
+                statusText.textContent = 'Motorista disponível - Rastreando em tempo real';
+            } else {
+                driverStatus.className = 'driver-status inactive';
+                statusIndicator.className = 'status-indicator status-inactive';
+                statusText.textContent = 'Motorista não disponível';
             }
+        }
+
+        // ATUALIZAR MARCADOR DO MOTORISTA
+        function updateDriverMarker(newPosition) {
+            if (!map) return;
             
             const newLatLng = new google.maps.LatLng(newPosition.lat, newPosition.lng);
             
             if (driverMarker) {
-                // Atualização direta - sem animação complexa
-                driverMarker.setPosition(newLatLng);
-                console.log('🔄 Marcador atualizado para nova posição');
+                // Animar movimento suave do marcador
+                animateMarkerMovement(driverMarker, newLatLng);
             } else {
                 // Criar novo marcador
                 driverMarker = new google.maps.Marker({
@@ -553,21 +684,41 @@
                     icon: getTaxiIcon(),
                     optimized: true
                 });
-                
-                console.log('🆕 Novo marcador criado:', newPosition);
-                updateDebugInfo('marker', 'Novo marcador criado');
             }
             
-            // GARANTIR que o marcador está visível
             if (driverMarker.getMap() === null) {
                 driverMarker.setMap(map);
-                console.log('🔧 Marcador reativado no mapa');
             }
+        }
+
+        // ANIMAÇÃO SUAVE DO MARCADOR
+        function animateMarkerMovement(marker, newPosition) {
+            const oldPosition = marker.getPosition();
+            const steps = 20;
+            const latIncrement = (newPosition.lat() - oldPosition.lat()) / steps;
+            const lngIncrement = (newPosition.lng() - oldPosition.lng()) / steps;
+            
+            let currentStep = 0;
+            
+            function animateStep() {
+                if (currentStep < steps) {
+                    currentStep++;
+                    const newLat = oldPosition.lat() + (latIncrement * currentStep);
+                    const newLng = oldPosition.lng() + (lngIncrement * currentStep);
+                    
+                    marker.setPosition(new google.maps.LatLng(newLat, newLng));
+                    setTimeout(animateStep, 50);
+                } else {
+                    marker.setPosition(newPosition);
+                }
+            }
+            
+            animateStep();
         }
 
         // CALCULAR DISTÂNCIA ENTRE DOIS PONTOS (metros)
         function getDistance(pos1, pos2) {
-            const R = 6371000; // Raio da Terra em metros
+            const R = 6371000;
             const dLat = (pos2.lat - pos1.lat) * Math.PI / 180;
             const dLng = (pos2.lng - pos1.lng) * Math.PI / 180;
             const a = 
@@ -590,7 +741,6 @@
             
             directionsService.route(request, function(result, status) {
                 if (status == google.maps.DirectionsStatus.OK) {
-                    // Renderizar rota cinza
                     if (!driverToClientRenderer) {
                         driverToClientRenderer = new google.maps.DirectionsRenderer({
                             map: map,
@@ -604,12 +754,7 @@
                             }
                         });
                     }
-                    
                     driverToClientRenderer.setDirections(result);
-                    console.log('🛣️ Rota motorista-cliente atualizada');
-                    
-                } else {
-                    console.error('❌ Erro ao calcular rota motorista-cliente:', status);
                 }
             });
         }
@@ -619,40 +764,24 @@
             if (driverToClientRenderer) {
                 driverToClientRenderer.setMap(null);
                 driverToClientRenderer = null;
-                console.log('🗑️ Rota motorista-cliente removida');
             }
         }
 
-        // OBTER DADOS DO MOTORISTA - VERIFICAÇÃO ROBUSTA
+        // OBTER DADOS DO MOTORISTA (FALLBACK)
         function getDriverData() {
             try {
                 const data = localStorage.getItem('lisboago_driver_data');
                 if (data) {
                     const driverData = JSON.parse(data);
-                    
-                    // VERIFICAÇÃO COMPLETA dos dados
-                    if (driverData.isTracking && 
-                        driverData.position && 
-                        typeof driverData.position.lat === 'number' &&
-                        typeof driverData.position.lng === 'number' &&
-                        driverData.timestamp) {
-                        
-                        // Verificar se os dados não estão muito antigos (menos de 2 minutos)
+                    if (driverData.isTracking && driverData.position && driverData.timestamp) {
                         const dataAge = Date.now() - driverData.timestamp;
-                        if (dataAge < 120000) { // 2 minutos
+                        if (dataAge < 120000) {
                             return driverData;
-                        } else {
-                            console.log('⚠️ Dados do motorista expirados:', Math.round(dataAge/1000) + 's');
-                            return null;
                         }
-                    } else {
-                        console.log('⚠️ Dados do motorista incompletos:', driverData);
-                        return null;
                     }
                 }
                 return null;
             } catch (error) {
-                console.error('❌ Erro ao ler dados do motorista:', error);
                 return null;
             }
         }
@@ -660,14 +789,8 @@
         // REMOVER MARCADOR DO MOTORISTA
         function removeDriverMarker() {
             if (driverMarker) {
-                if (driverAnimation) {
-                    clearInterval(driverAnimation);
-                    driverAnimation = null;
-                }
                 driverMarker.setMap(null);
                 driverMarker = null;
-                console.log('🗑️ Marcador do motorista removido');
-                updateDebugInfo('marker', 'Marcador removido');
             }
         }
 
@@ -680,7 +803,7 @@
             };
         }
 
-        // OBTER ÍCONE DO CLIENTE (BONEQUINHO)
+        // OBTER ÍCONE DO CLIENTE
         function getClientIcon() {
             return {
                 url: 'https://cdn-icons-png.flaticon.com/128/7324/7324835.png',
@@ -752,18 +875,6 @@
                     document.getElementById('route-price').textContent = priceInfo.price + ' €';
                     document.getElementById('route-info').style.display = 'block';
                     
-                    const routeData = {
-                        origin: origin,
-                        destination: destination,
-                        duration: duration,
-                        distance: distance,
-                        price: priceInfo.price,
-                        isWeekend: priceInfo.isWeekend,
-                        baseRate: priceInfo.baseRate,
-                        timestamp: Date.now()
-                    };
-                    localStorage.setItem('lisboago_route_data', JSON.stringify(routeData));
-                    
                 } else {
                     console.error('❌ Erro ao calcular rota:', status);
                     alert('Não foi possível calcular a rota. Verifique os endereços.');
@@ -776,8 +887,7 @@
         // =============================================
 
         function initMap() {
-            console.log('🗺️ Inicializando mapa principal...');
-            updateDebugInfo('map', 'Iniciando mapa...');
+            console.log('🗺️ Inicializando mapa principal com Firebase...');
             
             const mapOptions = {
                 center: { lat: 38.7223, lng: -9.1393 },
@@ -852,9 +962,9 @@
                         calculateRoute(originPlace.geometry.location, destinationPlace.geometry.location);
                     }
                     
-                    const driverData = getDriverData();
-                    if (driverData && driverData.isTracking) {
-                        calculateDriverToClientRoute(driverData.position, clientPosition);
+                    // Calcular rota para motorista se estiver ativo
+                    if (driverActive && lastDriverPosition) {
+                        calculateDriverToClientRoute(lastDriverPosition, clientPosition);
                     }
                 });
                 
@@ -932,20 +1042,12 @@
             });
             
             initAutocomplete();
-            setupRealTimeTracking();
-
-            console.log('✅ Mapa principal inicializado com sucesso');
-            updateDebugInfo('map', 'Mapa pronto');
             
-            // Verificar motorista ativo imediatamente após o mapa carregar
-            setTimeout(() => {
-                const driverData = getDriverData();
-                if (driverData && driverData.isTracking) {
-                    console.log('🚕 Motorista ativo detectado após carregar mapa:', driverData.position);
-                    updateDriverMarker(driverData.position);
-                    updateDebugInfo('driver', 'Motorista detectado');
-                }
-            }, 1000);
+            // INICIAR SISTEMAS DE RASTREAMENTO
+            setupFirebaseListener(); // Sistema principal
+            setupRealTimeTracking(); // Sistema fallback
+
+            console.log('✅ Mapa principal + Firebase inicializados com sucesso');
         }
         
         function loadGoogleMaps() {
@@ -957,21 +1059,17 @@
         }
         
         window.onload = function() {
-            console.log('🌐 Página inicial carregada - Sistema GLOBAL');
-            updateDebugInfo('page', 'Página carregada');
+            console.log('🌐 Página inicial carregada - Sistema Firebase');
             loadGoogleMaps();
         };
 
-        // DEBUG - Monitorar status
-        setInterval(() => {
-            const driverData = getDriverData();
-            console.log('📊 Status do sistema:', {
-                driverData: driverData ? 'PRESENTE' : 'AUSENTE',
-                driverMarker: driverMarker ? 'VISÍVEL' : 'INVISÍVEL',
-                checks: driverDataCheckCount,
-                lastPosition: lastDriverPosition ? `${lastDriverPosition.lat.toFixed(6)}, ${lastDriverPosition.lng.toFixed(6)}` : 'N/A'
-            });
-        }, 10000);
+        // Limpar recursos quando a página for fechada
+        window.addEventListener('beforeunload', function() {
+            stopFirebaseListener();
+            if (positionUpdateInterval) {
+                clearInterval(positionUpdateInterval);
+            }
+        });
     </script>
 </body>
 </html>
