@@ -192,8 +192,8 @@
         
         .status-indicator {
             display: inline-block;
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             margin-right: 8px;
         }
@@ -231,6 +231,17 @@
             border-left: 4px solid #ffc107;
             font-size: 11px;
             text-align: center;
+        }
+        
+        .error-status {
+            background: #ffeaea;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border-left: 4px solid #DB4437;
+            font-size: 11px;
+            text-align: center;
+            color: #c1351d;
         }
         
         /* Footer Mobile */
@@ -398,7 +409,7 @@
     <!-- Loading -->
     <div class="loading" id="loading">
         <div class="spinner"></div>
-        <div>Iniciando rastreamento...</div>
+        <div id="loading-text">Iniciando rastreamento...</div>
     </div>
     
     <!-- Footer -->
@@ -465,7 +476,8 @@
         // FUNÇÕES MOBILE
         // =============================================
 
-        function showLoading() {
+        function showLoading(message = "Iniciando rastreamento...") {
+            document.getElementById('loading-text').textContent = message;
             document.getElementById('loading').style.display = 'block';
         }
 
@@ -480,7 +492,7 @@
         }
 
         // =============================================
-        // SISTEMA FIREBASE - SEM TIMEOUT
+        // SISTEMA FIREBASE
         // =============================================
 
         async function saveDriverPositionToFirebase(position) {
@@ -494,8 +506,7 @@
                 driverId: currentDriverId,
                 driverName: currentDriverId === 'motorista_mega' ? 'Mega Hair' : 'Heitor',
                 lastUpdate: new Date().toLocaleTimeString('pt-BR'),
-                accuracy: position.coords.accuracy,
-                battery: position.coords.altitude // Simulação de bateria
+                accuracy: position.coords.accuracy
             };
             
             try {
@@ -535,7 +546,9 @@
             const syncStatusText = document.getElementById('sync-status-text');
             
             if (syncStatus && syncStatusText) {
+                // Remover classes anteriores
                 syncStatus.className = 'sync-status';
+                
                 if (type === 'firebase') {
                     syncStatus.style.background = '#fff3cd';
                     syncStatus.style.borderLeftColor = '#ffc107';
@@ -548,7 +561,7 @@
         }
 
         // =============================================
-        // SISTEMA DE RASTREAMENTO MOBILE - SEM TIMEOUT
+        // SISTEMA DE RASTREAMENTO MOBILE - CORRIGIDO
         // =============================================
 
         function toggleTracking() {
@@ -561,155 +574,185 @@
         }
 
         function startDriverTracking() {
-            if (navigator.geolocation) {
-                console.log('🚕 INICIANDO RASTREAMENTO...');
-                showLoading();
-                
-                // CONFIGURAÇÃO SEM TIMEOUT - RASTREAMENTO CONTÍNUO
-                const geoOptions = {
-                    enableHighAccuracy: true,
-                    timeout: 0, // ZERO TIMEOUT - RASTREAMENTO CONTÍNUO
-                    maximumAge: 0
-                };
-                
-                // Primeiro obtém a posição atual
-                navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        hideLoading();
-                        initWatchPosition();
-                    },
-                    function(error) {
-                        hideLoading();
-                        handleGeolocationError(error);
-                    },
-                    geoOptions
-                );
-                
-                function initWatchPosition() {
-                    // WATCH POSITION SEM TIMEOUT - RASTREAMENTO INFINITO
-                    driverTrackingInterval = navigator.geolocation.watchPosition(
-                        function(position) {
-                            const pos = {
-                                lat: position.coords.latitude,
-                                lng: position.coords.longitude
-                            };
-                            
-                            console.log('📍 Nova posição detectada:', pos);
-                            
-                            // Enviar para Firebase IMEDIATAMENTE
-                            saveDriverPositionToFirebase(position);
-                            
-                            // Salvar localmente também
-                            const driverData = {
-                                isTracking: true,
-                                position: pos,
-                                timestamp: Date.now(),
-                                driverId: currentDriverId
-                            };
-                            localStorage.setItem('lisboago_driver_data', JSON.stringify(driverData));
-                            
-                            // Atualizar mapa
-                            if (map) {
-                                const newLatLng = new google.maps.LatLng(pos.lat, pos.lng);
-                                
-                                if (driverMarker) {
-                                    driverMarker.setPosition(newLatLng);
-                                } else {
-                                    driverMarker = new google.maps.Marker({
-                                        map: map,
-                                        position: newLatLng,
-                                        title: 'Sua localização atual - Em movimento',
-                                        icon: getTaxiIcon(),
-                                        optimized: true
-                                    });
-                                }
-                                
-                                // Centralizar mapa na nova posição
-                                map.panTo(newLatLng);
-                            }
-                            
-                            // Atualizar informações na tela
-                            updateAddressInfo(new google.maps.LatLng(pos.lat, pos.lng));
-                            lastPosition = pos;
-                            updateSeconds = 0;
-                            
-                            if (document.getElementById('update-seconds')) {
-                                document.getElementById('update-seconds').textContent = '0 segundos';
-                            }
-                        },
-                        handleGeolocationError,
-                        {
-                            enableHighAccuracy: true,
-                            timeout: 0, // ZERO TIMEOUT - SEM LIMITE DE TEMPO
-                            maximumAge: 1000 // Atualizar a cada 1 segundo
-                        }
-                    );
-                    
-                    isDriverTracking = true;
-                    document.getElementById('tracking-btn').textContent = 'Parar Rastreamento';
-                    document.getElementById('tracking-btn').classList.add('tracking-active');
-                    document.getElementById('tracking-status').textContent = 'ATIVO - Contínuo';
-                    document.getElementById('status-indicator').className = 'status-indicator tracking-on';
-                    document.getElementById('driver-name').textContent = currentDriverId === 'motorista_mega' ? 'Mega Hair' : 'Heitor';
-                    
-                    startUpdateTimer();
-                    updateSyncStatus('firebase', 'Firebase: Sincronização ATIVA!');
-                    
-                    console.log('✅ Rastreamento iniciado com sucesso - SEM TIMEOUT');
-                }
-                
-            } else {
+            console.log('🚕 TENTANDO INICIAR RASTREAMENTO...');
+            
+            if (!navigator.geolocation) {
                 alert('❌ Seu navegador não suporta geolocalização.');
+                return;
             }
+
+            showLoading('Solicitando permissão de localização...');
+
+            // CONFIGURAÇÃO SIMPLIFICADA E FUNCIONAL
+            const geoOptions = {
+                enableHighAccuracy: true,
+                timeout: 10000, // 10 segundos de timeout
+                maximumAge: 0
+            };
+
+            // Primeiro: Solicitar permissão e obter posição atual
+            navigator.geolocation.getCurrentPosition(
+                // Sucesso
+                function(position) {
+                    console.log('✅ Permissão concedida! Posição obtida:', position.coords);
+                    hideLoading();
+                    
+                    // Iniciar watchPosition após permissão concedida
+                    initWatchPosition();
+                },
+                // Erro
+                function(error) {
+                    hideLoading();
+                    handleGeolocationError(error);
+                },
+                geoOptions
+            );
+        }
+
+        function initWatchPosition() {
+            console.log('🎯 INICIANDO WATCH POSITION...');
+            
+            // Configuração do watchPosition
+            const watchOptions = {
+                enableHighAccuracy: true,
+                timeout: 15000, // 15 segundos
+                maximumAge: 1000 // Atualizar a cada 1 segundo
+            };
+
+            driverTrackingInterval = navigator.geolocation.watchPosition(
+                // Sucesso - Nova posição detectada
+                function(position) {
+                    console.log('📍 Nova posição detectada:', position.coords);
+                    
+                    const pos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+
+                    // Atualizar Firebase
+                    saveDriverPositionToFirebase(position);
+
+                    // Atualizar mapa
+                    updateMapPosition(pos);
+
+                    // Atualizar interface
+                    updateInterface(position);
+
+                    // Resetar contador
+                    updateSeconds = 0;
+                    document.getElementById('update-seconds').textContent = '0 segundos';
+
+                },
+                // Erro
+                function(error) {
+                    handleGeolocationError(error);
+                },
+                watchOptions
+            );
+
+            // Atualizar interface para mostrar que está ativo
+            isDriverTracking = true;
+            document.getElementById('tracking-btn').textContent = 'Parar Rastreamento';
+            document.getElementById('tracking-btn').classList.add('tracking-active');
+            document.getElementById('tracking-status').textContent = 'ATIVO';
+            document.getElementById('status-indicator').className = 'status-indicator tracking-on';
+            document.getElementById('driver-name').textContent = currentDriverId === 'motorista_mega' ? 'Mega Hair' : 'Heitor';
+
+            startUpdateTimer();
+            updateSyncStatus('firebase', 'Firebase: Sincronização ATIVA!');
+
+            console.log('✅ RASTREAMENTO INICIADO COM SUCESSO!');
+        }
+
+        function updateMapPosition(pos) {
+            if (!map) return;
+
+            const newLatLng = new google.maps.LatLng(pos.lat, pos.lng);
+            
+            if (driverMarker) {
+                driverMarker.setPosition(newLatLng);
+            } else {
+                driverMarker = new google.maps.Marker({
+                    map: map,
+                    position: newLatLng,
+                    title: 'Sua localização atual - Em movimento',
+                    icon: getTaxiIcon(),
+                    optimized: true
+                });
+            }
+            
+            // Centralizar mapa suavemente
+            map.panTo(newLatLng);
+        }
+
+        function updateInterface(position) {
+            const pos = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+
+            // Atualizar coordenadas
+            document.getElementById('coordinates').textContent = 
+                `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+
+            // Atualizar endereço
+            updateAddressInfo(new google.maps.LatLng(pos.lat, pos.lng));
+
+            lastPosition = pos;
         }
 
         function handleGeolocationError(error) {
             let errorMessage = 'Erro desconhecido';
+            let errorDetails = '';
+            
             switch(error.code) {
                 case error.PERMISSION_DENIED:
                     errorMessage = 'Permissão de localização negada';
+                    errorDetails = 'Por favor, permita o acesso à localização nas configurações do seu navegador.';
                     break;
                 case error.POSITION_UNAVAILABLE:
                     errorMessage = 'Localização indisponível';
+                    errorDetails = 'Não foi possível obter a localização. Verifique se o GPS está ativo.';
                     break;
                 case error.TIMEOUT:
-                    // IGNORAR ERRO DE TIMEOUT - RASTREAMENTO É CONTÍNUO
-                    console.log('⚠️ Timeout ignorado - rastreamento contínuo');
-                    return;
+                    errorMessage = 'Tempo limite excedido';
+                    errorDetails = 'A solicitação de localização demorou muito. Tente novamente.';
+                    break;
             }
             
-            updateSyncStatus('error', 'Erro GPS: ' + errorMessage);
-            alert('Erro no GPS: ' + errorMessage + '\n\nVerifique as permissões de localização.');
+            console.error('❌ Erro GPS:', errorMessage, error);
             
+            // Atualizar status de erro
+            updateSyncStatus('error', `GPS: ${errorMessage}`);
+            
+            // Mostrar alerta mais informativo
+            alert(`Erro no GPS: ${errorMessage}\n\n${errorDetails}\n\nCódigo do erro: ${error.code}`);
+            
+            // Parar rastreamento se estava ativo
             if (isDriverTracking) {
                 stopDriverTracking();
             }
         }
 
         function stopDriverTracking() {
-            console.log('🛑 PARANDO RASTREAMENTO MANUALMENTE...');
+            console.log('🛑 PARANDO RASTREAMENTO...');
             
+            // Parar watchPosition
             if (driverTrackingInterval && navigator.geolocation) {
                 navigator.geolocation.clearWatch(driverTrackingInterval);
                 driverTrackingInterval = null;
             }
             
+            // Parar timer de atualização
             if (updateTimer) {
                 clearInterval(updateTimer);
                 updateTimer = null;
             }
             
-            // PARAR NO FIREBASE - SÓ QUANDO O MOTORISTA CLICAR
+            // Parar no Firebase
             stopDriverTrackingInFirebase();
             
-            const stopData = {
-                isTracking: false,
-                timestamp: Date.now(),
-                stopped: true,
-                manualStop: true
-            };
-            localStorage.setItem('lisboago_driver_data', JSON.stringify(stopData));
-            
+            // Atualizar interface
             isDriverTracking = false;
             syncCounter = 0;
             
@@ -719,7 +762,9 @@
             document.getElementById('status-indicator').className = 'status-indicator tracking-off';
             document.getElementById('update-seconds').textContent = '-- segundos';
             
-            console.log('✅ Rastreamento parado manualmente com sucesso');
+            updateSyncStatus('firebase', 'Firebase: Pronto para rastrear');
+            
+            console.log('✅ RASTREAMENTO PARADO COM SUCESSO');
         }
 
         function startUpdateTimer() {
@@ -732,21 +777,11 @@
                 if (updateElement) {
                     updateElement.textContent = updateSeconds + ' segundos';
                 }
-                
-                // A cada 30 segundos, verificar se ainda está ativo
-                if (updateSeconds % 30 === 0) {
-                    console.log('🔄 Rastreamento ainda ativo:', updateSeconds + ' segundos');
-                }
             }, 1000);
         }
 
         function updateAddressInfo(position) {
-            const coordinates = document.getElementById('coordinates');
             const address = document.getElementById('address');
-            
-            if (coordinates) {
-                coordinates.textContent = `${position.lat().toFixed(6)}, ${position.lng().toFixed(6)}`;
-            }
             
             if (address) {
                 const geocoder = new google.maps.Geocoder();
@@ -769,7 +804,7 @@
         }
 
         // =============================================
-        // INICIALIZAÇÃO MOBILE - MELHORADA
+        // INICIALIZAÇÃO MOBILE
         // =============================================
 
         function initMap() {
@@ -798,7 +833,6 @@
             
             // Detectar qual motorista está logado
             function detectDriver() {
-                // Verificar se veio do login do Heitor
                 const urlParams = new URLSearchParams(window.location.search);
                 const user = urlParams.get('user');
                 
@@ -811,18 +845,18 @@
                 }
             }
             
-            // Melhorar sensibilidade dos botões
+            // Configurar botão de rastreamento
             trackingBtn.addEventListener('click', function() {
+                console.log('🔄 Botão de rastreamento clicado');
                 toggleTracking();
             });
             
+            // Configurar botão de logout
             logoutBtn.addEventListener('click', function() {
                 vibrate();
                 if (confirm('Deseja sair da área do motorista?')) {
                     if (isDriverTracking) {
-                        // NÃO PARA O RASTREAMENTO AUTOMATICAMENTE AO SAIR
-                        // O motorista deve parar manualmente se quiser
-                        console.log('🚗 Saindo da página - RASTREAMENTO MANTIDO ATIVO');
+                        console.log('🚗 Saindo com rastreamento ativo');
                     }
                     setTimeout(() => {
                         window.location.href = 'index.html';
@@ -838,20 +872,7 @@
             detectDriver();
             testFirebaseConnection();
             
-            // Verificar se já estava rastreando
-            checkExistingTracking();
-        }
-        
-        function checkExistingTracking() {
-            const existingData = localStorage.getItem('lisboago_driver_data');
-            if (existingData) {
-                const data = JSON.parse(existingData);
-                if (data.isTracking && data.driverId === currentDriverId) {
-                    console.log('🔄 Rastreamento anterior detectado - continuando...');
-                    // Não iniciar automaticamente, mas mostrar status
-                    updateSyncStatus('firebase', 'Pronto para rastrear');
-                }
-            }
+            console.log('✅ Mapa inicializado com sucesso');
         }
         
         async function testFirebaseConnection() {
@@ -877,24 +898,18 @@
             document.head.appendChild(script);
         }
         
+        // INICIALIZAÇÃO
         window.onload = function() {
-            console.log('📱 Motorista mobile carregado');
+            console.log('📱 Página do motorista carregada');
             loadGoogleMaps();
         };
 
-        // MANTER RASTREAMENTO ATIVO MESMO SAINDO DA PÁGINA
-        window.addEventListener('beforeunload', function() {
-            if (isDriverTracking) {
-                console.log('📍 Saindo da página - RASTREAMENTO MANTIDO ATIVO no Firebase');
-                // Não fazer nada - o Firebase continua enviando posições
-            }
-        });
-
-        // Recarregar Firebase se a página recuperar foco
-        window.addEventListener('focus', function() {
-            if (isDriverTracking) {
-                console.log('📱 Página em foco - rastreamento ainda ativo');
-                updateSyncStatus('firebase', 'Firebase: Sincronização ATIVA!');
+        // Gerenciar eventos de visibilidade
+        window.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                console.log('📱 Página em segundo plano');
+            } else {
+                console.log('📱 Página em primeiro plano');
             }
         });
     </script>
