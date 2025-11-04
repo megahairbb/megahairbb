@@ -15,6 +15,7 @@
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
+            -webkit-text-size-adjust: 100%;
         }
         
         body, html {
@@ -73,6 +74,7 @@
             cursor: pointer;
             font-size: 12px;
             white-space: nowrap;
+            min-height: 36px;
         }
         
         /* Painel de pesquisa Mobile */
@@ -98,6 +100,27 @@
             margin-bottom: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             -webkit-appearance: none;
+            min-height: 48px;
+            line-height: 20px;
+        }
+        
+        /* Melhorias para campos de entrada em mobile */
+        input, textarea, select {
+            font-size: 16px !important; /* Prevenir zoom no iOS */
+            touch-action: manipulation;
+        }
+        
+        /* Aumentar área de toque para campos em mobile */
+        @media (max-width: 768px) {
+            .search-input {
+                padding: 16px 15px;
+                min-height: 52px;
+            }
+            
+            .driver-area-btn {
+                padding: 10px 16px;
+                min-height: 40px;
+            }
         }
         
         /* Informações da rota Mobile */
@@ -160,6 +183,7 @@
             font-size: 18px;
             box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
             transition: all 0.2s ease;
+            min-height: 60px;
         }
         
         .btn-call-taxi:active {
@@ -217,6 +241,7 @@
             border-radius: 10px;
             font-size: 16px;
             -webkit-appearance: none;
+            min-height: 48px;
         }
         
         .login-btn {
@@ -230,6 +255,7 @@
             font-weight: 600;
             cursor: pointer;
             margin-top: 10px;
+            min-height: 50px;
         }
         
         .login-btn:active {
@@ -282,6 +308,42 @@
             
             header {
                 padding-top: max(12px, env(safe-area-inset-top));
+            }
+        }
+        
+        /* Versão Desktop */
+        @media (min-width: 1025px) {
+            .search-panel {
+                left: 20px;
+                right: auto;
+                width: 400px;
+                top: 80px;
+            }
+            
+            .route-info {
+                left: 20px;
+                right: auto;
+                width: 400px;
+                top: 200px;
+            }
+            
+            .call-taxi-section {
+                left: 20px;
+                right: auto;
+                width: 400px;
+            }
+            
+            .logo h1 {
+                font-size: 22px;
+            }
+            
+            .logo p {
+                font-size: 12px;
+            }
+            
+            .driver-area-btn {
+                font-size: 14px;
+                padding: 10px 20px;
             }
         }
         
@@ -676,6 +738,14 @@
                     document.getElementById('route-distance').textContent = distance;
                     document.getElementById('route-info').style.display = 'block';
                     
+                    // Salvar dados da rota para usar na página de chamar táxi
+                    const routeData = {
+                        duration: duration,
+                        distance: distance,
+                        price: calculateRidePrice(distance)
+                    };
+                    localStorage.setItem('lisboago_route_data', JSON.stringify(routeData));
+                    
                     vibrate();
                     
                 } else {
@@ -683,6 +753,34 @@
                     alert('Não foi possível calcular a rota. Verifique os endereços.');
                 }
             });
+        }
+        
+        function calculateRidePrice(distanceText) {
+            try {
+                // Extrair número da distância (ex: "5.2 km" -> 5.2)
+                const distanceMatch = distanceText.match(/(\d+\.?\d*)/);
+                if (!distanceMatch) return '--';
+                
+                const distance = parseFloat(distanceMatch[1]);
+                
+                // Tarifas da LisboaGo
+                const baseRate = 2.50; // Taxa base
+                const perKmRate = 1.50; // Por km
+                const minRate = 5.00; // Valor mínimo
+                
+                // Calcular preço
+                let price = baseRate + (distance * perKmRate);
+                
+                // Garantir valor mínimo
+                if (price < minRate) {
+                    price = minRate;
+                }
+                
+                return price.toFixed(2);
+            } catch (error) {
+                console.error('❌ Erro ao calcular preço:', error);
+                return '--';
+            }
         }
 
         // =============================================

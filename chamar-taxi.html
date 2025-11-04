@@ -10,6 +10,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
         
         body {
@@ -67,6 +68,8 @@
             border-radius: 8px;
             font-size: 16px;
             transition: border-color 0.3s;
+            font-size: 16px !important; /* Prevenir zoom no iOS */
+            min-height: 48px;
         }
         
         input:focus, select:focus, textarea:focus {
@@ -105,6 +108,7 @@
             transition: all 0.3s;
             width: 100%;
             margin-top: 10px;
+            min-height: 50px;
         }
         
         .btn-primary {
@@ -194,6 +198,7 @@
             z-index: 1000;
             justify-content: center;
             align-items: center;
+            padding: 20px;
         }
         
         .modal-content {
@@ -219,6 +224,9 @@
             margin-bottom: 20px;
             background: white;
             transition: border-color 0.3s;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
         }
         
         .StripeElement--focus {
@@ -283,6 +291,15 @@
             
             body {
                 padding: 10px;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+            
+            input, select, textarea {
+                padding: 14px 15px;
+                min-height: 52px;
             }
         }
     </style>
@@ -385,18 +402,13 @@
                     Confirmar Chamada - €0,50
                 </button>
                 
-                <div class="driver-info">
-                    <strong>Motorista Disponível</strong><br>
-                    <span style="font-size: 18px; color: #0F9D58;">351 939 354 112</span>
+                <div class="success-message" id="success-message">
+                    ✅ Pagamento confirmado! Agora você pode enviar a solicitação via WhatsApp.
                 </div>
                 
                 <button type="button" class="btn btn-success" id="enviar-whatsapp" disabled>
                     📱 Enviar Via WhatsApp
                 </button>
-                
-                <div class="success-message" id="success-message">
-                    ✅ Pagamento confirmado! Agora você pode enviar a solicitação via WhatsApp.
-                </div>
             </form>
         </div>
     </div>
@@ -540,35 +552,6 @@
                 
             } catch (error) {
                 console.error('❌ Erro ao carregar dados salvos:', error);
-            }
-        }
-        
-        // Calcular preço da corrida baseado na distância
-        function calculateRidePrice(distanceText) {
-            try {
-                // Extrair número da distância (ex: "5.2 km" -> 5.2)
-                const distanceMatch = distanceText.match(/(\d+\.?\d*)/);
-                if (!distanceMatch) return '--';
-                
-                const distance = parseFloat(distanceMatch[1]);
-                
-                // Tarifas da LisboaGo
-                const baseRate = 2.50; // Taxa base
-                const perKmRate = 1.50; // Por km
-                const minRate = 5.00; // Valor mínimo
-                
-                // Calcular preço
-                let price = baseRate + (distance * perKmRate);
-                
-                // Garantir valor mínimo
-                if (price < minRate) {
-                    price = minRate;
-                }
-                
-                return price.toFixed(2);
-            } catch (error) {
-                console.error('❌ Erro ao calcular preço:', error);
-                return '--';
             }
         }
         
@@ -762,14 +745,8 @@ ${formData.observacao ? `*Observações:* ${formData.observacao}` : ''}
             initializeStripeElements();
             loadSavedRouteData();
             
-            // Verificar se já houve pagamento confirmado anteriormente
-            const paymentConfirmed = localStorage.getItem('lisboago_payment_confirmed');
-            if (paymentConfirmed === 'true') {
-                successMessage.style.display = 'block';
-                confirmarBtn.disabled = true;
-                confirmarBtn.textContent = '✅ Pagamento Confirmado';
-                whatsappBtn.disabled = false;
-            }
+            // Limpar confirmação de pagamento anterior ao carregar a página
+            localStorage.removeItem('lisboago_payment_confirmed');
         };
     </script>
 </body>
