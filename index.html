@@ -392,6 +392,24 @@
         let isCalculatingRoute = false;
 
         // =============================================
+        // FUNÇÕES MOBILE
+        // =============================================
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function vibrate() {
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        // =============================================
         // SISTEMA FIREBASE - ESCUTA CONTÍNUA
         // =============================================
 
@@ -597,7 +615,7 @@
         }
 
         // =============================================
-        // INICIALIZAÇÃO DO MAPA
+        // INICIALIZAÇÃO DO MAPA - COM CORREÇÃO DO BOTÃO MOTORISTA
         // =============================================
 
         function initMap() {
@@ -646,6 +664,32 @@
             let autocompleteOrigin, autocompleteDestination;
             let originPlace = null;
             let destinationPlace = null;
+            
+            // CORREÇÃO ESPECÍFICA DO BOTÃO MOTORISTA
+            function setupDriverButton() {
+                console.log('🔧 Configurando botão Motorista...');
+                
+                // Remover event listener anterior se existir
+                driverAreaBtn.replaceWith(driverAreaBtn.cloneNode(true));
+                const newDriverBtn = document.getElementById('driver-area-btn');
+                
+                // Adicionar novo event listener
+                newDriverBtn.addEventListener('click', function(e) {
+                    console.log('🎯 Botão Motorista clicado!');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    vibrate();
+                    loginModal.style.display = 'flex';
+                    
+                    // Focar no primeiro campo após um pequeno delay
+                    setTimeout(() => {
+                        usernameInput.focus();
+                    }, 300);
+                });
+                
+                console.log('✅ Botão Motorista configurado com sucesso');
+            }
             
             // CORREÇÃO DA SENSIBILIDADE DOS CAMPOS
             function setupInputFields() {
@@ -732,21 +776,7 @@
                 });
             }
             
-            // EVENT LISTENERS
-            driverAreaBtn.addEventListener('click', function() {
-                vibrate();
-                loginModal.style.display = 'flex';
-                // Focar no primeiro campo do modal
-                setTimeout(() => usernameInput.focus(), 100);
-            });
-            
-            loginModal.addEventListener('click', function(e) {
-                if (e.target === loginModal) {
-                    loginModal.style.display = 'none';
-                    errorMessage.style.display = 'none';
-                }
-            });
-            
+            // CONFIGURAR BOTÃO DE LOGIN
             loginBtn.addEventListener('click', function() {
                 vibrate();
                 const username = usernameInput.value;
@@ -764,6 +794,14 @@
                     }
                 } else {
                     errorMessage.style.display = 'block';
+                }
+            });
+            
+            // CONFIGURAR FECHAMENTO DO MODAL
+            loginModal.addEventListener('click', function(e) {
+                if (e.target === loginModal) {
+                    loginModal.style.display = 'none';
+                    errorMessage.style.display = 'none';
                 }
             });
             
@@ -792,6 +830,8 @@
                 gestureHandling: 'cooperative'
             });
             
+            // CONFIGURAR BOTÃO MOTORISTA PRIMEIRO
+            setupDriverButton();
             setupInputFields();
             initAutocomplete();
             setupFirebaseListener();
