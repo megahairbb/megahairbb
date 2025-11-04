@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Área do Motorista - LisboaGo</title>
     
     <!-- Firebase -->
@@ -14,24 +14,28 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
         
         body, html {
             height: 100%;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f5f5f5;
+            touch-action: manipulation;
         }
         
-        /* Cabeçalho */
+        /* Cabeçalho Mobile */
         header {
             background: #000;
             color: white;
-            padding: 15px 20px;
+            padding: 12px 15px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1000;
         }
         
         .header-content {
-            max-width: 1200px;
+            max-width: 100%;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
@@ -39,14 +43,14 @@
         }
         
         .logo h1 {
-            font-size: 28px;
+            font-size: 18px;
             font-weight: 700;
             color: #FFD700;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
         
         .logo p {
-            font-size: 14px;
+            font-size: 10px;
             color: #fff;
             opacity: 0.8;
         }
@@ -55,97 +59,118 @@
             background: #DB4437;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 8px 15px;
+            border-radius: 20px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            font-size: 12px;
+            white-space: nowrap;
         }
         
-        .logout-btn:hover {
+        .logout-btn:active {
             background: #c1351d;
-            transform: translateY(-2px);
+            transform: scale(0.95);
         }
         
-        /* Layout Principal */
+        /* Layout Principal Mobile */
         .main-container {
-            max-width: 1200px;
+            max-width: 100%;
             margin: 0 auto;
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 1fr 400px;
-            gap: 20px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
             min-height: calc(100vh - 140px);
         }
         
-        /* Mapa */
-        #map {
-            height: 500px;
-            width: 100%;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        /* Mapa Mobile */
+        .map-container {
+            order: 1;
         }
         
-        /* Painel do motorista */
+        #map {
+            height: 300px;
+            width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        /* Painel do motorista Mobile */
         .driver-panel {
             background: white;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            order: 2;
         }
         
         .panel-title {
             color: #000;
             margin-bottom: 20px;
-            font-size: 20px;
+            font-size: 18px;
             border-bottom: 2px solid #FFD700;
             padding-bottom: 10px;
+            text-align: center;
         }
         
         .driver-info {
             background: #f8f9fa;
             padding: 15px;
-            border-radius: 8px;
+            border-radius: 12px;
             margin-bottom: 20px;
             border-left: 4px solid #FFD700;
         }
         
         .info-item {
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 5px 0;
         }
         
         .info-label {
             font-weight: 600;
             color: #555;
+            font-size: 14px;
         }
         
         .info-value {
             font-weight: bold;
             color: #0F9D58;
+            font-size: 14px;
         }
         
         .tracking-section {
             background: #f8f9fa;
             padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .tracking-section h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
         }
         
         .tracking-btn {
-            padding: 12px 20px;
+            padding: 16px 20px;
             border: none;
-            border-radius: 6px;
+            border-radius: 25px;
             background: #0F9D58;
             color: white;
             cursor: pointer;
             font-size: 16px;
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             width: 100%;
             margin-top: 10px;
+        }
+        
+        .tracking-btn:active {
+            transform: scale(0.98);
         }
         
         .tracking-btn:hover {
@@ -162,8 +187,8 @@
         
         .status-indicator {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             margin-right: 8px;
         }
@@ -187,65 +212,47 @@
             background: #2d3748;
             color: #68d391;
             padding: 8px;
-            border-radius: 4px;
-            font-size: 12px;
+            border-radius: 8px;
+            font-size: 11px;
             margin-top: 5px;
+            word-break: break-all;
         }
         
         .sync-status {
-            background: #e8f5e8;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-            border-left: 4px solid #0F9D58;
-            font-size: 12px;
-        }
-        
-        .sync-success {
-            background: #e8f5e8;
-            border-left-color: #0F9D58;
-        }
-        
-        .sync-error {
-            background: #ffeaea;
-            border-left-color: #DB4437;
-        }
-        
-        .sync-ultra {
-            background: #e3f2fd;
-            border-left-color: #1976d2;
-        }
-        
-        .sync-firebase {
             background: #fff3cd;
-            border-left-color: #ffc107;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border-left: 4px solid #ffc107;
+            font-size: 11px;
+            text-align: center;
         }
         
-        /* Footer */
+        /* Footer Mobile */
         footer {
             background: #000;
             color: white;
-            padding: 30px 20px;
-            margin-top: 40px;
+            padding: 20px 15px;
+            margin-top: 20px;
         }
         
         .footer-content {
-            max-width: 1200px;
+            max-width: 100%;
             margin: 0 auto;
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
-            gap: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
         
         .footer-section h3 {
             color: #FFD700;
-            margin-bottom: 15px;
-            font-size: 18px;
+            margin-bottom: 10px;
+            font-size: 16px;
         }
         
         .footer-section p {
-            margin-bottom: 10px;
-            font-size: 14px;
+            margin-bottom: 8px;
+            font-size: 12px;
             opacity: 0.8;
         }
         
@@ -254,7 +261,7 @@
         }
         
         .footer-links li {
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         
         .footer-links a {
@@ -262,21 +269,22 @@
             text-decoration: none;
             opacity: 0.8;
             transition: opacity 0.3s;
+            font-size: 12px;
         }
         
-        .footer-links a:hover {
+        .footer-links a:active {
             opacity: 1;
             color: #FFD700;
         }
         
         .footer-bottom {
-            max-width: 1200px;
-            margin: 20px auto 0;
-            padding-top: 20px;
+            max-width: 100%;
+            margin: 15px auto 0;
+            padding-top: 15px;
             border-top: 1px solid #333;
             text-align: center;
             opacity: 0.7;
-            font-size: 14px;
+            font-size: 12px;
         }
         
         @keyframes pulse {
@@ -285,20 +293,132 @@
             100% { opacity: 1; }
         }
         
-        @media (max-width: 768px) {
+        /* Loading Spinner */
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #FFD700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Safe Areas para iPhone */
+        @supports (padding: max(0px)) {
+            header {
+                padding-top: max(12px, env(safe-area-inset-top));
+                padding-bottom: max(12px, env(safe-area-inset-bottom));
+            }
+        }
+        
+        /* Tablets e Landscape */
+        @media (min-width: 768px) {
             .main-container {
-                grid-template-columns: 1fr;
-                padding: 15px;
+                flex-direction: row;
+                height: calc(100vh - 140px);
             }
             
-            .footer-content {
-                grid-template-columns: 1fr;
-                gap: 20px;
+            .map-container {
+                flex: 1;
+                order: 1;
+            }
+            
+            .driver-panel {
+                flex: 0 0 350px;
+                order: 2;
+                height: 100%;
+                overflow-y: auto;
             }
             
             #map {
-                height: 400px;
+                height: 100%;
             }
+        }
+        
+        /* Smartphones em Landscape */
+        @media (max-width: 767px) and (orientation: landscape) {
+            .main-container {
+                flex-direction: row;
+                height: calc(100vh - 100px);
+            }
+            
+            .map-container {
+                flex: 1;
+            }
+            
+            .driver-panel {
+                flex: 0 0 300px;
+                height: 100%;
+                overflow-y: auto;
+            }
+            
+            #map {
+                height: 100%;
+            }
+            
+            header {
+                padding: 8px 12px;
+            }
+            
+            .logo h1 {
+                font-size: 16px;
+            }
+        }
+        
+        /* Smartphones pequenos */
+        @media (max-width: 360px) {
+            .logo h1 {
+                font-size: 16px;
+            }
+            
+            .logo p {
+                font-size: 9px;
+            }
+            
+            .logout-btn {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+            
+            .driver-panel {
+                padding: 15px;
+            }
+            
+            .tracking-btn {
+                padding: 14px 15px;
+                font-size: 14px;
+            }
+        }
+        
+        /* Melhorias para touch */
+        button {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        input, select, textarea {
+            font-size: 16px; /* Prevenir zoom no iOS */
         }
     </style>
 </head>
@@ -308,7 +428,7 @@
         <div class="header-content">
             <div class="logo">
                 <h1>LisboaGo - Motorista</h1>
-                <p>Bem-vindo à sua área de trabalho</p>
+                <p>Bem-vindo à sua área</p>
             </div>
             <button class="logout-btn" id="logout-btn">Sair</button>
         </div>
@@ -329,10 +449,6 @@
                 <div class="info-item">
                     <span class="info-label">Nome:</span>
                     <span class="info-value">Mega Hair</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Celular:</span>
-                    <span class="info-value">+351 939 354 112</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Email:</span>
@@ -363,7 +479,7 @@
                 </div>
                 <div class="coordinates" id="address">--</div>
                 
-                <div class="sync-status sync-firebase" id="sync-status">
+                <div class="sync-status" id="sync-status">
                     🔥 Firebase: <span id="sync-status-text">Conectando...</span>
                 </div>
                 
@@ -372,13 +488,19 @@
         </div>
     </div>
     
+    <!-- Loading -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Iniciando rastreamento...</div>
+    </div>
+    
     <!-- Footer -->
     <footer>
         <div class="footer-content">
             <div class="footer-section">
                 <h3>LisboaGo</h3>
-                <p>Serviço de táxi confiável em Lisboa, disponível 24 horas por dia.</p>
-                <p>Contato: Email: lisboagopt@hotmail.com</p>
+                <p>Serviço de táxi confiável em Lisboa</p>
+                <p>Email: lisboagopt@hotmail.com</p>
             </div>
             
             <div class="footer-section">
@@ -391,10 +513,9 @@
             </div>
             
             <div class="footer-section">
-                <h3>Horário de Operação</h3>
+                <h3>Horário</h3>
                 <p>24 horas por dia</p>
                 <p>7 dias por semana</p>
-                <p>Atendimento em toda Lisboa</p>
             </div>
         </div>
         
@@ -405,15 +526,15 @@
 
     <script>
         // =============================================
-        // CONFIGURAÇÃO FIREBASE - ATUALIZE COM SEUS DADOS
+        // CONFIGURAÇÃO FIREBASE
         // =============================================
         const firebaseConfig = {
-            apiKey: "SUA_API_KEY_AQUI",
+            apiKey: "AIzaSyB2ljIwjmbPF1vfCgth4bLd3d7hhLdxKIk",
             authDomain: "lisboago-app.firebaseapp.com",
             projectId: "lisboago-app",
-            storageBucket: "lisboago-app.appspot.com",
-            messagingSenderId: "123456789012",
-            appId: "SUA_APP_ID_AQUI"
+            storageBucket: "lisboago-app.firebasestorage.app",
+            messagingSenderId: "467502556237",
+            appId: "1:467502556237:web:ff0074a42a664f7efba804"
         };
 
         // Inicializar Firebase
@@ -421,7 +542,7 @@
         const db = firebase.firestore();
 
         // =============================================
-        // VARIÁVEIS GLOBAIS DO MOTORISTA
+        // VARIÁVEIS GLOBAIS
         // =============================================
         let driverTrackingInterval = null;
         let driverMarker = null;
@@ -433,10 +554,27 @@
         let syncCounter = 0;
 
         // =============================================
-        // SISTEMA FIREBASE - FUNÇÕES PRINCIPAIS
+        // FUNÇÕES MOBILE
         // =============================================
 
-        // SALVAR POSIÇÃO NO FIREBASE
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function vibrate() {
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        // =============================================
+        // SISTEMA FIREBASE
+        // =============================================
+
         async function saveDriverPositionToFirebase(position) {
             const driverData = {
                 isTracking: true,
@@ -447,51 +585,38 @@
                 timestamp: Date.now(),
                 driverId: 'motorista_mega',
                 driverName: 'Mega Hair',
-                phone: '+351 939 354 112',
                 lastUpdate: new Date().toLocaleTimeString('pt-BR'),
                 accuracy: position.coords.accuracy
             };
             
             try {
-                console.log('🔥 SALVANDO NO FIREBASE:', driverData.position);
-                
-                // Salvar no Firestore
                 await db.collection('drivers').doc('motorista_mega').set(driverData);
                 
                 syncCounter++;
-                updateSyncStatus('firebase', `Sincronizado ${syncCounter}x - ${driverData.position.lat.toFixed(6)}, ${driverData.position.lng.toFixed(6)}`);
-                console.log('✅ Posição salva no Firebase com sucesso!');
+                updateSyncStatus('firebase', `Sincronizado ${syncCounter}x`);
                 
             } catch (error) {
-                console.error('❌ Erro ao salvar no Firebase:', error);
-                updateSyncStatus('error', 'Erro no Firebase - Usando localStorage');
-                
-                // Fallback: salvar no localStorage também
+                console.error('❌ Erro no Firebase:', error);
+                updateSyncStatus('error', 'Erro no Firebase');
                 localStorage.setItem('lisboago_driver_data', JSON.stringify(driverData));
             }
         }
 
-        // PARAR RASTREAMENTO NO FIREBASE
         async function stopDriverTrackingInFirebase() {
             const stopData = {
                 isTracking: false,
                 timestamp: Date.now(),
                 stopped: true,
-                lastUpdate: new Date().toLocaleTimeString('pt-BR'),
-                message: 'Rastreamento parado pelo motorista'
+                lastUpdate: new Date().toLocaleTimeString('pt-BR')
             };
             
             try {
                 await db.collection('drivers').doc('motorista_mega').set(stopData);
-                console.log('🛑 Estado de PARADA salvo no Firebase');
-                updateSyncStatus('firebase', 'Rastreamento parado no Firebase');
             } catch (error) {
                 console.error('❌ Erro ao parar no Firebase:', error);
-                updateSyncStatus('error', 'Erro ao parar no Firebase');
             }
         }
 
-        // Função para atualizar status da sincronização
         function updateSyncStatus(type, message) {
             const syncStatus = document.getElementById('sync-status');
             const syncStatusText = document.getElementById('sync-status-text');
@@ -499,24 +624,22 @@
             if (syncStatus && syncStatusText) {
                 syncStatus.className = 'sync-status';
                 if (type === 'firebase') {
-                    syncStatus.classList.add('sync-firebase');
-                } else if (type === 'success') {
-                    syncStatus.classList.add('sync-success');
+                    syncStatus.style.background = '#fff3cd';
+                    syncStatus.style.borderLeftColor = '#ffc107';
                 } else if (type === 'error') {
-                    syncStatus.classList.add('sync-error');
-                } else if (type === 'ultra') {
-                    syncStatus.classList.add('sync-ultra');
+                    syncStatus.style.background = '#ffeaea';
+                    syncStatus.style.borderLeftColor = '#DB4437';
                 }
                 syncStatusText.textContent = message;
             }
         }
 
         // =============================================
-        // SISTEMA DE RASTREAMENTO - VERSÃO FIREBASE
+        // SISTEMA DE RASTREAMENTO MOBILE
         // =============================================
 
-        // Função para iniciar/parar rastreamento
         function toggleTracking() {
+            vibrate();
             if (!isDriverTracking) {
                 startDriverTracking();
             } else {
@@ -524,148 +647,135 @@
             }
         }
 
-        // FUNÇÃO PRINCIPAL - Iniciar rastreamento GPS
         function startDriverTracking() {
             if (navigator.geolocation) {
-                console.log('🚕 INICIANDO RASTREAMENTO GPS COM FIREBASE...');
+                console.log('🚕 INICIANDO RASTREAMENTO...');
+                showLoading();
                 
-                // Configuração de alta precisão
                 const geoOptions = {
                     enableHighAccuracy: true,
-                    timeout: 10000,
+                    timeout: 15000,
                     maximumAge: 0
                 };
                 
-                driverTrackingInterval = navigator.geolocation.watchPosition(
-                    // Sucesso - posição obtida
+                // Primeiro obtém a posição atual
+                navigator.geolocation.getCurrentPosition(
                     function(position) {
-                        console.log('📍 Nova posição GPS detectada:', {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude,
-                            accuracy: position.coords.accuracy + 'm'
-                        });
-                        
-                        const pos = {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude
-                        };
-                        
-                        // 1. SALVAR NO FIREBASE (sistema principal)
-                        saveDriverPositionToFirebase(position);
-                        
-                        // 2. SALVAR NO LOCALSTORAGE (fallback)
-                        const driverData = {
-                            isTracking: true,
-                            position: pos,
-                            timestamp: Date.now(),
-                            driverId: 'motorista_mega'
-                        };
-                        localStorage.setItem('lisboago_driver_data', JSON.stringify(driverData));
-                        
-                        // 3. ATUALIZAR MAPA LOCAL
-                        if (map) {
-                            // Centralizar mapa na nova posição
-                            map.setCenter(pos);
-                            
-                            // Atualizar ou criar marcador local
-                            if (driverMarker) {
-                                driverMarker.setPosition(pos);
-                                console.log('🔄 Marcador movido para nova posição');
-                            } else {
-                                driverMarker = new google.maps.Marker({
-                                    map: map,
-                                    position: pos,
-                                    title: 'Sua localização atual (Rastreando)',
-                                    icon: getTaxiIcon(),
-                                    optimized: true
-                                });
-                                console.log('🆕 Novo marcador criado no mapa local');
-                            }
-                        }
-                        
-                        // 4. ATUALIZAR INFORMAÇÕES DA INTERFACE
-                        updateAddressInfo(new google.maps.LatLng(pos.lat, pos.lng));
-                        lastPosition = pos;
-                        
-                        // 5. REINICIAR CONTADOR DE ATUALIZAÇÃO
-                        updateSeconds = 0;
-                        if (document.getElementById('update-seconds')) {
-                            document.getElementById('update-seconds').textContent = '0 segundos';
-                        }
+                        hideLoading();
+                        initWatchPosition();
                     },
-                    // Erro - falha no GPS
                     function(error) {
-                        console.error('❌ Erro no rastreamento GPS:', error);
-                        
-                        let errorMessage = 'Erro desconhecido';
-                        switch(error.code) {
-                            case error.PERMISSION_DENIED:
-                                errorMessage = 'Permissão de localização negada';
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                errorMessage = 'Localização indisponível';
-                                break;
-                            case error.TIMEOUT:
-                                errorMessage = 'Tempo limite excedido';
-                                break;
-                        }
-                        
-                        updateSyncStatus('error', 'Erro no GPS: ' + errorMessage);
-                        alert('Erro no GPS: ' + errorMessage + '\n\nVerifique se:\n• A localização está ativada\n• Você concedeu permissão\n• O GPS está funcionando');
+                        hideLoading();
+                        handleGeolocationError(error);
                     },
                     geoOptions
                 );
                 
-                // ATUALIZAR INTERFACE - Rastreamento ATIVO
-                isDriverTracking = true;
-                document.getElementById('tracking-btn').textContent = 'Parar Rastreamento';
-                document.getElementById('tracking-btn').classList.add('tracking-active');
-                document.getElementById('tracking-status').textContent = 'Ativo';
-                document.getElementById('status-indicator').className = 'status-indicator tracking-on';
-                
-                // INICIAR CONTADOR DE TEMPO
-                startUpdateTimer();
-                
-                console.log('✅ Rastreamento Firebase iniciado com sucesso');
-                updateSyncStatus('firebase', 'Firebase: Sincronização ativa!');
+                function initWatchPosition() {
+                    driverTrackingInterval = navigator.geolocation.watchPosition(
+                        function(position) {
+                            const pos = {
+                                lat: position.coords.latitude,
+                                lng: position.coords.longitude
+                            };
+                            
+                            saveDriverPositionToFirebase(position);
+                            
+                            const driverData = {
+                                isTracking: true,
+                                position: pos,
+                                timestamp: Date.now(),
+                                driverId: 'motorista_mega'
+                            };
+                            localStorage.setItem('lisboago_driver_data', JSON.stringify(driverData));
+                            
+                            if (map) {
+                                map.setCenter(pos);
+                                
+                                if (driverMarker) {
+                                    driverMarker.setPosition(pos);
+                                } else {
+                                    driverMarker = new google.maps.Marker({
+                                        map: map,
+                                        position: pos,
+                                        title: 'Sua localização atual',
+                                        icon: getTaxiIcon(),
+                                        optimized: true
+                                    });
+                                }
+                            }
+                            
+                            updateAddressInfo(new google.maps.LatLng(pos.lat, pos.lng));
+                            lastPosition = pos;
+                            updateSeconds = 0;
+                            
+                            if (document.getElementById('update-seconds')) {
+                                document.getElementById('update-seconds').textContent = '0 segundos';
+                            }
+                        },
+                        handleGeolocationError,
+                        geoOptions
+                    );
+                    
+                    isDriverTracking = true;
+                    document.getElementById('tracking-btn').textContent = 'Parar Rastreamento';
+                    document.getElementById('tracking-btn').classList.add('tracking-active');
+                    document.getElementById('tracking-status').textContent = 'Ativo';
+                    document.getElementById('status-indicator').className = 'status-indicator tracking-on';
+                    
+                    startUpdateTimer();
+                    updateSyncStatus('firebase', 'Firebase: Sincronização ativa!');
+                }
                 
             } else {
-                alert('❌ Seu navegador não suporta geolocalização.\n\nUse um navegador moderno como Chrome, Firefox ou Safari.');
+                alert('❌ Seu navegador não suporta geolocalização.');
             }
         }
 
-        // FUNÇÃO PARA PARAR RASTREAMENTO
-        function stopDriverTracking() {
-            console.log('🛑 PARANDO RASTREAMENTO GPS...');
+        function handleGeolocationError(error) {
+            let errorMessage = 'Erro desconhecido';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage = 'Permissão de localização negada';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage = 'Localização indisponível';
+                    break;
+                case error.TIMEOUT:
+                    errorMessage = 'Tempo limite excedido';
+                    break;
+            }
             
-            // 1. PARAR WATCH POSITION
+            updateSyncStatus('error', 'Erro GPS: ' + errorMessage);
+            alert('Erro no GPS: ' + errorMessage + '\n\nVerifique as permissões de localização.');
+            
+            if (isDriverTracking) {
+                stopDriverTracking();
+            }
+        }
+
+        function stopDriverTracking() {
+            console.log('🛑 PARANDO RASTREAMENTO...');
+            
             if (driverTrackingInterval && navigator.geolocation) {
                 navigator.geolocation.clearWatch(driverTrackingInterval);
                 driverTrackingInterval = null;
-                console.log('✅ WatchPosition parado');
             }
             
-            // 2. PARAR CONTADOR DE TEMPO
             if (updateTimer) {
                 clearInterval(updateTimer);
                 updateTimer = null;
-                console.log('✅ Timer parado');
             }
             
-            // 3. PARAR NO FIREBASE
             stopDriverTrackingInFirebase();
             
-            // 4. PARAR NO LOCALSTORAGE
             const stopData = {
                 isTracking: false,
                 timestamp: Date.now(),
-                stopped: true,
-                lastUpdate: new Date().toLocaleTimeString('pt-BR'),
-                message: 'Rastreamento parado pelo motorista'
+                stopped: true
             };
             localStorage.setItem('lisboago_driver_data', JSON.stringify(stopData));
             
-            // 5. ATUALIZAR INTERFACE - Rastreamento INATIVO
             isDriverTracking = false;
             syncCounter = 0;
             
@@ -674,11 +784,8 @@
             document.getElementById('tracking-status').textContent = 'Inativo';
             document.getElementById('status-indicator').className = 'status-indicator tracking-off';
             document.getElementById('update-seconds').textContent = '-- segundos';
-            
-            console.log('✅ Rastreamento parado com sucesso');
         }
 
-        // Iniciar contador de atualização
         function startUpdateTimer() {
             if (updateTimer) clearInterval(updateTimer);
             
@@ -692,7 +799,6 @@
             }, 1000);
         }
 
-        // Atualizar informações de endereço (geocodificação)
         function updateAddressInfo(position) {
             const coordinates = document.getElementById('coordinates');
             const address = document.getElementById('address');
@@ -704,111 +810,90 @@
             if (address) {
                 const geocoder = new google.maps.Geocoder();
                 geocoder.geocode({ location: position }, function(results, status) {
-                    if (status === 'OK') {
-                        if (results[0]) {
-                            address.textContent = results[0].formatted_address;
-                        } else {
-                            address.textContent = "Endereço não encontrado";
-                        }
+                    if (status === 'OK' && results[0]) {
+                        address.textContent = results[0].formatted_address;
                     } else {
-                        address.textContent = "Erro ao buscar endereço";
+                        address.textContent = "Buscando endereço...";
                     }
                 });
             }
         }
 
-        // Obter ícone do táxi
         function getTaxiIcon() {
             return {
-                url: 'https://cdn-icons-png.flaticon.com/128/1048/1048339.png',
-                scaledSize: new google.maps.Size(50, 50),
-                anchor: new google.maps.Point(25, 25)
+                url: 'https://cdn-icons-png.flaticon.com/128/16062/16062688.png',
+                scaledSize: new google.maps.Size(45, 45),
+                anchor: new google.maps.Point(22, 22)
             };
         }
 
         // =============================================
-        // INICIALIZAÇÃO DO MAPA DO MOTORISTA
+        // INICIALIZAÇÃO MOBILE
         // =============================================
 
         function initMap() {
-            console.log('🗺️ Inicializando mapa do motorista com Firebase...');
+            console.log('🗺️ Inicializando mapa mobile...');
             
-            // Configuração inicial do mapa
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
             const mapOptions = {
                 center: { lat: 38.7223, lng: -9.1393 },
-                zoom: 12,
+                zoom: isMobile ? 13 : 12,
                 mapTypeId: google.maps.MapTypeId.ROADMAP,
                 fullscreenControl: true,
-                streetViewControl: true,
-                mapTypeControl: true
+                streetViewControl: false,
+                mapTypeControl: false,
+                zoomControl: true,
+                zoomControlOptions: {
+                    position: google.maps.ControlPosition.RIGHT_BOTTOM
+                },
+                gestureHandling: 'greedy'
             };
             
-            // Criar o mapa
             map = new google.maps.Map(document.getElementById('map'), mapOptions);
             
-            // ELEMENTOS DA INTERFACE
             const trackingBtn = document.getElementById('tracking-btn');
             const logoutBtn = document.getElementById('logout-btn');
             
-            // EVENT LISTENERS
-            
-            // 1. BOTÃO DE RASTREAMENTO
             trackingBtn.addEventListener('click', function() {
-                console.log('🖱️ Botão de rastreamento clicado - Estado atual:', isDriverTracking ? 'ATIVO' : 'INATIVO');
                 toggleTracking();
             });
             
-            // 2. BOTÃO DE LOGOUT
             logoutBtn.addEventListener('click', function() {
+                vibrate();
                 if (confirm('Deseja sair da área do motorista?')) {
-                    console.log('🚪 Logout solicitado');
-                    // Parar rastreamento antes de sair
                     if (isDriverTracking) {
-                        console.log('🛑 Parando rastreamento antes do logout...');
                         stopDriverTracking();
                     }
-                    window.location.href = 'index.html';
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 500);
                 }
             });
             
-            // 3. AJUSTAR MAPA NO REDIMENSIONAMENTO
-            window.addEventListener('resize', function() {
-                google.maps.event.trigger(map, 'resize');
+            // Prevenir zoom duplo
+            map.setOptions({
+                gestureHandling: 'cooperative'
             });
             
-            // VERIFICAR CONEXÃO COM FIREBASE
             testFirebaseConnection();
-            
-            console.log('✅ Mapa do motorista inicializado - Sistema Firebase pronto');
         }
         
-        // TESTAR CONEXÃO COM FIREBASE
         async function testFirebaseConnection() {
             try {
                 const docRef = db.collection('drivers').doc('motorista_mega');
                 const doc = await docRef.get();
                 
                 if (doc.exists) {
-                    console.log('✅ Conexão Firebase estabelecida com sucesso');
-                    updateSyncStatus('firebase', 'Firebase: Conectado e pronto');
-                    
-                    // Verificar se já estava rastreando
-                    const data = doc.data();
-                    if (data.isTracking) {
-                        console.log('🔄 Rastreamento anterior detectado no Firebase');
-                        updateSyncStatus('firebase', 'Rastreamento anterior detectado');
-                    }
+                    updateSyncStatus('firebase', 'Firebase: Conectado');
                 } else {
-                    console.log('ℹ️ Documento do motorista não existe ainda');
-                    updateSyncStatus('firebase', 'Firebase: Pronto para uso');
+                    updateSyncStatus('firebase', 'Firebase: Pronto');
                 }
             } catch (error) {
-                console.error('❌ Erro na conexão Firebase:', error);
-                updateSyncStatus('error', 'Firebase: Erro de conexão - Usando localStorage');
+                updateSyncStatus('error', 'Firebase: Erro de conexão');
             }
         }
 
-        // Carregar a API do Google Maps
         function loadGoogleMaps() {
             const script = document.createElement('script');
             script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBmc6HTJo70N_ueR1qFVgyu74v7FIl7dU4&callback=initMap`;
@@ -817,31 +902,15 @@
             document.head.appendChild(script);
         }
         
-        // =============================================
-        // INICIALIZAÇÃO DA PÁGINA
-        // =============================================
-        
         window.onload = function() {
-            console.log('🌐 Página do motorista carregada - Sistema Firebase');
+            console.log('📱 Motorista mobile carregado');
             loadGoogleMaps();
         };
 
-        // =============================================
-        // DEBUG E MONITORAMENTO
-        // =============================================
-        
-        // Monitorar performance a cada 30 segundos
-        setInterval(() => {
+        // Gerenciar estado da aplicação
+        window.addEventListener('beforeunload', function() {
             if (isDriverTracking) {
-                console.log('📊 Performance - Sincronizações Firebase:', syncCounter, 'Tempo ativo:', updateSeconds + 's');
-            }
-        }, 30000);
-
-        // Prevenir fechamento da página sem parar o rastreamento
-        window.addEventListener('beforeunload', function(e) {
-            if (isDriverTracking) {
-                console.log('⚠️ Página está fechando com rastreamento ativo');
-                // Manter rastreamento ativo no Firebase
+                console.log('📍 Rastreamento mantido ativo');
             }
         });
     </script>
