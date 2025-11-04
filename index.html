@@ -68,13 +68,14 @@
             background: #FFD700;
             color: #000;
             border: none;
-            padding: 8px 15px;
+            padding: 10px 16px;
             border-radius: 20px;
             font-weight: 600;
             cursor: pointer;
             font-size: 12px;
             white-space: nowrap;
-            min-height: 36px;
+            min-height: 40px;
+            touch-action: manipulation;
         }
         
         /* Painel de pesquisa Mobile */
@@ -103,25 +104,13 @@
             min-height: 52px;
             line-height: 20px;
             touch-action: manipulation;
+            cursor: pointer;
         }
         
         /* Melhorias para campos de entrada em mobile */
         input, textarea, select {
             font-size: 16px !important;
             touch-action: manipulation;
-        }
-        
-        /* Aumentar área de toque para campos em mobile */
-        @media (max-width: 768px) {
-            .search-input {
-                padding: 18px 15px;
-                min-height: 56px;
-            }
-            
-            .driver-area-btn {
-                padding: 12px 18px;
-                min-height: 44px;
-            }
         }
         
         /* Informações da rota Mobile */
@@ -185,6 +174,7 @@
             box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
             transition: all 0.2s ease;
             min-height: 60px;
+            touch-action: manipulation;
         }
         
         .btn-call-taxi:active {
@@ -244,6 +234,7 @@
             -webkit-appearance: none;
             min-height: 52px;
             touch-action: manipulation;
+            cursor: pointer;
         }
         
         .login-btn {
@@ -258,6 +249,7 @@
             cursor: pointer;
             margin-top: 10px;
             min-height: 54px;
+            touch-action: manipulation;
         }
         
         .login-btn:active {
@@ -346,82 +338,6 @@
             .driver-area-btn {
                 font-size: 14px;
                 padding: 10px 20px;
-            }
-        }
-        
-        /* Landscape Mode */
-        @media (max-width: 768px) and (orientation: landscape) {
-            .search-panel {
-                top: 60px;
-                padding: 8px;
-            }
-            
-            .route-info {
-                top: 140px;
-                padding: 10px;
-            }
-            
-            .call-taxi-section {
-                bottom: 10px;
-            }
-            
-            .btn-call-taxi {
-                padding: 12px 20px;
-                font-size: 16px;
-            }
-            
-            header {
-                height: 50px;
-                padding: 8px 12px;
-            }
-            
-            .logo h1 {
-                font-size: 16px;
-            }
-        }
-        
-        /* Tablets */
-        @media (min-width: 769px) and (max-width: 1024px) {
-            .search-panel {
-                left: 20px;
-                right: 20px;
-                max-width: 600px;
-                margin: 0 auto;
-            }
-            
-            .route-info {
-                left: 20px;
-                right: 20px;
-                max-width: 600px;
-                margin: 0 auto;
-            }
-            
-            .call-taxi-section {
-                left: 20px;
-                right: 20px;
-                max-width: 600px;
-                margin: 0 auto;
-            }
-        }
-        
-        /* Smartphones pequenos */
-        @media (max-width: 360px) {
-            .logo h1 {
-                font-size: 16px;
-            }
-            
-            .logo p {
-                font-size: 9px;
-            }
-            
-            .driver-area-btn {
-                padding: 6px 12px;
-                font-size: 11px;
-            }
-            
-            .search-input {
-                padding: 12px;
-                font-size: 14px;
             }
         }
     </style>
@@ -521,6 +437,8 @@
         let clientPosition = null;
         let firebaseListener = null;
         let isCalculatingRoute = false;
+        let lastUpdateTime = 0;
+        const UPDATE_INTERVAL = 2000; // Atualizar a cada 2 segundos
 
         // =============================================
         // FUNÇÕES MOBILE
@@ -548,35 +466,48 @@
             console.log('👂 Iniciando escuta Firebase em tempo real...');
             
             try {
-                firebaseListener = db.collection('drivers').doc('motorista_mega')
-                    .onSnapshot(function(doc) {
-                        if (doc.exists) {
-                            const driverData = doc.data();
-                            
-                            if (driverData.isTracking && driverData.position) {
-                                const newPosition = driverData.position;
+                firebaseListener = db.collection('drivers')
+                    .where('isTracking', '==', true)
+                    .onSnapshot(function(snapshot) {
+                        const now = Date.now();
+                        
+                        // Prevenir atualizações muito rápidas
+                        if (now - lastUpdateTime < UPDATE_INTERVAL) {
+                            return;
+                        }
+                        
+                        snapshot.docChanges().forEach(function(change) {
+                            if (change.type === 'added' || change.type === 'modified') {
+                                const driverData = change.doc.data();
                                 
-                                const positionChanged = !lastDriverPosition || 
-                                    getDistance(lastDriverPosition, newPosition) > 2;
-                                
-                                if (positionChanged) {
-                                    console.log('📍 FIREBASE - Posição atualizada');
+                                if (driverData.isTracking && driverData.position) {
+                                    const newPosition = driverData.position;
                                     
-                                    updateDriverMarker(newPosition);
+                                    const positionChanged = !lastDriverPosition || 
+                                        getDistance(lastDriverPosition, newPosition) > 1; // Reduzido para 1 metro
                                     
-                                    if (clientPosition) {
-                                        calculateDriverToClientRoute(newPosition, clientPosition);
+                                    if (positionChanged) {
+                                        console.log('📍 FIREBASE - Posição atualizada:', newPosition);
+                                        
+                                        updateDriverMarker(newPosition);
+                                        
+                                        if (clientPosition) {
+                                            calculateDriverToClientRoute(newPosition, clientPosition);
+                                        }
+                                        
+                                        lastDriverPosition = newPosition;
+                                        lastUpdateTime = now;
                                     }
-                                    
-                                    lastDriverPosition = newPosition;
                                 }
-                            } else {
+                            } else if (change.type === 'removed') {
                                 removeDriverMarker();
                                 removeDriverToClientRoute();
                             }
-                        }
+                        });
                     }, function(error) {
                         console.error('❌ Erro na escuta Firebase:', error);
+                        // Tentar reconectar após 5 segundos
+                        setTimeout(setupFirebaseListener, 5000);
                     });
                     
             } catch (error) {
@@ -601,7 +532,8 @@
             const newLatLng = new google.maps.LatLng(newPosition.lat, newPosition.lng);
             
             if (driverMarker) {
-                animateMarkerMovement(driverMarker, newLatLng);
+                // Atualização direta para melhor performance
+                driverMarker.setPosition(newLatLng);
             } else {
                 driverMarker = new google.maps.Marker({
                     map: map,
@@ -611,30 +543,6 @@
                     optimized: true
                 });
             }
-        }
-
-        function animateMarkerMovement(marker, newPosition) {
-            const oldPosition = marker.getPosition();
-            const steps = 15;
-            const latIncrement = (newPosition.lat() - oldPosition.lat()) / steps;
-            const lngIncrement = (newPosition.lng() - oldPosition.lng()) / steps;
-            
-            let currentStep = 0;
-            
-            function animateStep() {
-                if (currentStep < steps) {
-                    currentStep++;
-                    const newLat = oldPosition.lat() + (latIncrement * currentStep);
-                    const newLng = oldPosition.lng() + (lngIncrement * currentStep);
-                    
-                    marker.setPosition(new google.maps.LatLng(newLat, newLng));
-                    setTimeout(animateStep, 40);
-                } else {
-                    marker.setPosition(newPosition);
-                }
-            }
-            
-            animateStep();
         }
 
         function getDistance(pos1, pos2) {
@@ -763,7 +671,6 @@
         function initMap() {
             console.log('🗺️ Inicializando mapa para mobile...');
             
-            // Detectar se é mobile
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
             const mapOptions = {
@@ -808,6 +715,30 @@
             let originPlace = null;
             let destinationPlace = null;
             
+            // CORREÇÃO DA SENSIBILIDADE DOS CAMPOS
+            function setupInputFields() {
+                // Adicionar evento de toque para todos os campos
+                const allInputs = document.querySelectorAll('input, textarea');
+                allInputs.forEach(input => {
+                    // Remover qualquer prevenção existente
+                    input.style.touchAction = 'manipulation';
+                    input.style.cursor = 'pointer';
+                    
+                    // Evento de toque simples
+                    input.addEventListener('touchstart', function(e) {
+                        e.preventDefault();
+                        this.focus();
+                        // Forçar teclado a aparecer
+                        this.click();
+                    }, { passive: false });
+                    
+                    // Evento de clique como fallback
+                    input.addEventListener('click', function() {
+                        this.focus();
+                    });
+                });
+            }
+            
             function initAutocomplete() {
                 autocompleteOrigin = new google.maps.places.Autocomplete(searchBox, {
                     types: ['geocode'],
@@ -819,15 +750,6 @@
                     types: ['geocode'],
                     componentRestrictions: { country: 'pt' },
                     fields: ['geometry', 'name']
-                });
-                
-                // Adicionar evento de clique direto para melhor sensibilidade
-                searchBox.addEventListener('click', function() {
-                    this.focus();
-                });
-                
-                destinationBox.addEventListener('click', function() {
-                    this.focus();
                 });
                 
                 autocompleteOrigin.addListener('place_changed', function() {
@@ -882,6 +804,8 @@
             driverAreaBtn.addEventListener('click', function() {
                 vibrate();
                 loginModal.style.display = 'flex';
+                // Focar no primeiro campo do modal
+                setTimeout(() => usernameInput.focus(), 100);
             });
             
             loginModal.addEventListener('click', function(e) {
@@ -896,7 +820,9 @@
                 const username = usernameInput.value;
                 const password = passwordInput.value;
                 
-                if (username === 'Mega' && password === '12345') {
+                // Logins válidos
+                if ((username === 'Mega' && password === '12345') || 
+                    (username === 'Heitor' && password === '12345')) {
                     window.location.href = 'motorista.html';
                 } else {
                     errorMessage.style.display = 'block';
@@ -928,6 +854,7 @@
                 gestureHandling: 'cooperative'
             });
             
+            setupInputFields();
             initAutocomplete();
             setupFirebaseListener();
 
@@ -948,17 +875,30 @@
             loadGoogleMaps();
         };
 
-        // GESTÃO DE RECURSOS
-        window.addEventListener('beforeunload', function() {
-            stopFirebaseListener();
+        // GESTÃO DE RECURSOS - MELHORADA
+        window.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                console.log('📱 Página em segundo plano - mantendo Firebase ativo');
+            } else {
+                console.log('📱 Página em primeiro plano');
+            }
         });
 
-        // PREVENIR SCROLL EM INPUTS
-        document.addEventListener('touchstart', function(e) {
-            if (e.target.tagName === 'INPUT') {
-                e.preventDefault();
+        // Reconectar Firebase se perder conexão
+        window.addEventListener('online', function() {
+            console.log('🌐 Conexão restaurada - verificando Firebase');
+            if (!firebaseListener) {
+                setupFirebaseListener();
             }
-        }, { passive: false });
+        });
+
+        // PREVENIR SCROLL EM INPUTS - CORRIGIDO
+        document.addEventListener('touchstart', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                // Permitir foco mas prevenir scroll
+                e.target.focus();
+            }
+        }, { passive: true });
     </script>
 </body>
 </html>
