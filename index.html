@@ -107,6 +107,12 @@
             cursor: pointer;
         }
         
+        /* Melhorias para campos de entrada em mobile */
+        input, textarea, select {
+            font-size: 16px !important;
+            touch-action: manipulation;
+        }
+        
         /* Informações da rota Mobile */
         .route-info {
             position: fixed;
@@ -287,53 +293,6 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        /* Status dos Motoristas */
-        .drivers-status {
-            position: fixed;
-            top: 200px;
-            right: 10px;
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 10px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            backdrop-filter: blur(10px);
-            max-width: 200px;
-            display: none;
-        }
-
-        .driver-status-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 8px;
-            padding: 5px;
-            border-radius: 5px;
-            background: #f8f9fa;
-        }
-
-        .driver-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .driver-name {
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .driver-active {
-            background: #d4edda;
-            border-left: 3px solid #28a745;
-        }
-
-        .driver-inactive {
-            background: #f8d7da;
-            border-left: 3px solid #dc3545;
-            opacity: 0.6;
-        }
     </style>
 </head>
 <body>
@@ -367,12 +326,6 @@
                 <div class="route-value" id="route-distance">-- km</div>
             </div>
         </div>
-    </div>
-
-    <!-- Status dos Motoristas -->
-    <div class="drivers-status" id="drivers-status">
-        <div style="font-weight: bold; margin-bottom: 10px; text-align: center;">Motoristas Online</div>
-        <div id="drivers-list"></div>
     </div>
     
     <!-- Botão Chame GoTáxi -->
@@ -458,7 +411,7 @@
         }
 
         // =============================================
-        // SISTEMA FIREBASE - MULTIPLOS MOTORISTAS (ATUALIZADO)
+        // SISTEMA FIREBASE - MULTIPLOS MOTORISTAS
         // =============================================
 
         function setupFirebaseListener() {
@@ -520,12 +473,8 @@
                             }
                         });
 
-                        // Atualizar interface de status dos motoristas
-                        updateDriversStatusDisplay();
-
                     }, function(error) {
                         console.error('❌ ERRO NA ESCUTA FIREBASE:', error);
-                        updateDriversStatusDisplay();
                         // Tentar reconectar após 5 segundos
                         setTimeout(setupFirebaseListener, 5000);
                     });
@@ -533,53 +482,6 @@
             } catch (error) {
                 console.error('❌ ERRO AO CONFIGURAR FIREBASE:', error);
             }
-        }
-
-        function updateDriversStatusDisplay() {
-            const driversList = document.getElementById('drivers-list');
-            const driversStatus = document.getElementById('drivers-status');
-            
-            if (!driversList) return;
-            
-            driversList.innerHTML = '';
-            
-            const driverConfigs = {
-                'motorista_mega': { name: 'Mega Hair', color: '#FFD700' },
-                'motorista_heitor': { name: 'Heitor Silva', color: '#FF6B6B' },
-                'motorista_joao': { name: 'João Santos', color: '#4ECDC4' },
-                'motorista_maria': { name: 'Maria Oliveira', color: '#FFA5A5' }
-            };
-            
-            let activeCount = 0;
-            
-            // Mostrar todos os motoristas configurados
-            Object.keys(driverConfigs).forEach(driverId => {
-                const config = driverConfigs[driverId];
-                const driverData = activeDrivers[driverId];
-                const isActive = driverData && driverData.isActive;
-                
-                if (isActive) activeCount++;
-                
-                const driverElement = document.createElement('div');
-                driverElement.className = `driver-status-item ${isActive ? 'driver-active' : 'driver-inactive'}`;
-                
-                driverElement.innerHTML = `
-                    <div class="driver-color" style="background-color: ${config.color}"></div>
-                    <div class="driver-name">${config.name}</div>
-                    <div style="margin-left: auto; font-size: 10px;">${isActive ? '✅' : '❌'}</div>
-                `;
-                
-                driversList.appendChild(driverElement);
-            });
-            
-            // Mostrar/ocultar painel baseado no número de motoristas ativos
-            if (activeCount > 0) {
-                driversStatus.style.display = 'block';
-            } else {
-                driversStatus.style.display = 'none';
-            }
-            
-            console.log(`📊 Motoristas ativos: ${activeCount}`);
         }
 
         function stopFirebaseListener() {
@@ -591,7 +493,7 @@
         }
 
         // =============================================
-        // FUNÇÕES DO MAPA - MULTIPLOS MOTORISTAS (ATUALIZADO)
+        // FUNÇÕES DO MAPA - MULTIPLOS MOTORISTAS
         // =============================================
 
         function updateDriverMarker(driverId, driverName, newPosition) {
@@ -742,7 +644,7 @@
         }
 
         // =============================================
-        // INICIALIZAÇÃO DO MAPA (ATUALIZADO)
+        // INICIALIZAÇÃO DO MAPA
         // =============================================
 
         function initMap() {
@@ -970,8 +872,6 @@
                 console.log('📱 Página em segundo plano - Firebase ativo');
             } else {
                 console.log('📱 Página em primeiro plano');
-                // Atualizar status ao retornar
-                updateDriversStatusDisplay();
             }
         });
 
