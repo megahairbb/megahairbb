@@ -243,6 +243,37 @@
             text-align: center;
             color: #c1351d;
         }
+
+        /* Status de Conectividade */
+        .connection-status {
+            position: fixed;
+            top: 70px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .connection-online {
+            background: #0F9D58;
+        }
+
+        .connection-offline {
+            background: #DB4437;
+        }
         
         /* Footer Mobile */
         footer {
@@ -351,6 +382,12 @@
             <button class="logout-btn" id="logout-btn">Sair</button>
         </div>
     </header>
+
+    <!-- Status de Conectividade -->
+    <div class="connection-status" id="connection-status">
+        <div class="connection-dot connection-online" id="connection-dot"></div>
+        <span id="connection-text">Conectado</span>
+    </div>
     
     <!-- Conteúdo Principal -->
     <div class="main-container">
@@ -472,6 +509,8 @@
         let syncCounter = 0;
         let currentDriverId = '';
         let currentDriverName = '';
+        let lastFirebaseUpdate = 0;
+        let isFirebaseConnected = false;
 
         // =============================================
         // FUNÇÕES MOBILE
@@ -489,6 +528,24 @@
         function vibrate() {
             if (navigator.vibrate) {
                 navigator.vibrate(50);
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const connectionDot = document.getElementById('connection-dot');
+            const connectionText = document.getElementById('connection-text');
+            const connectionStatus = document.getElementById('connection-status');
+            
+            isFirebaseConnected = connected;
+            
+            if (connected) {
+                connectionDot.className = 'connection-dot connection-online';
+                connectionText.textContent = 'Conectado';
+                connectionStatus.style.background = 'rgba(212, 237, 218, 0.95)';
+            } else {
+                connectionDot.className = 'connection-dot connection-offline';
+                connectionText.textContent = 'Offline';
+                connectionStatus.style.background = 'rgba(248, 215, 218, 0.95)';
             }
         }
 
@@ -514,7 +571,7 @@
                 document.getElementById('driver-name').textContent = currentDriverName;
                 document.getElementById('driver-id').textContent = currentDriverId;
                 
-                console.log(`🚕 Motorista detectado: ${currentDriverName} (${currentDriverId})`);
+                console.log(`🚕 MOTORISTA DETECTADO: ${currentDriverName} (${currentDriverId})`);
             } else {
                 // Default fallback
                 currentDriverId = 'motorista_mega';
@@ -526,35 +583,57 @@
         }
 
         // =============================================
-        // SISTEMA FIREBASE
+        // SISTEMA FIREBASE (ATUALIZADO)
         // =============================================
 
         async function saveDriverPositionToFirebase(position) {
+            const now = Date.now();
+            
+            // Evitar atualizações muito rápidas (mínimo 2 segundos)
+            if (now - lastFirebaseUpdate < 2000) {
+                console.log('⏱️  Firebase: Atualização muito rápida, ignorando...');
+                return;
+            }
+            
             const driverData = {
                 isTracking: true,
                 position: {
                     lat: position.coords.latitude,
                     lng: position.coords.longitude
                 },
-                timestamp: Date.now(),
+                timestamp: now,
                 driverId: currentDriverId,
                 driverName: currentDriverName,
                 lastUpdate: new Date().toLocaleTimeString('pt-BR'),
-                accuracy: position.coords.accuracy
+                accuracy: position.coords.accuracy,
+                speed: position.coords.speed || 0,
+                heading: position.coords.heading || 0
             };
             
             try {
+                console.log('📡 ENVIANDO PARA FIREBASE:', driverData.position);
+                
                 await db.collection('drivers').doc(currentDriverId).set(driverData, { merge: true });
                 
+                lastFirebaseUpdate = now;
                 syncCounter++;
-                updateSyncStatus('firebase', `Sincronizado ${syncCounter}x`);
                 
-                console.log('📍 Posição enviada para Firebase:', driverData.position);
+                updateSyncStatus('firebase', `Sincronizado ${syncCounter}x`);
+                updateConnectionStatus(true);
+                
+                console.log('✅ Firebase: Posição enviada com sucesso');
                 
             } catch (error) {
-                console.error('❌ Erro no Firebase:', error);
-                updateSyncStatus('error', 'Erro no Firebase');
-                localStorage.setItem('gotaxi_driver_data', JSON.stringify(driverData));
+                console.error('❌ ERRO NO FIREBASE:', error);
+                updateSyncStatus('error', `Erro: ${error.message}`);
+                updateConnectionStatus(false);
+                
+                // Salvar localmente para tentar novamente depois
+                localStorage.setItem('gotaxi_driver_data', JSON.stringify({
+                    ...driverData,
+                    failedSync: true,
+                    error: error.message
+                }));
             }
         }
 
@@ -563,14 +642,18 @@
                 isTracking: false,
                 timestamp: Date.now(),
                 stopped: true,
-                lastUpdate: new Date().toLocaleTimeString('pt-BR')
+                lastUpdate: new Date().toLocaleTimeString('pt-BR'),
+                driverId: currentDriverId,
+                driverName: currentDriverName
             };
             
             try {
                 await db.collection('drivers').doc(currentDriverId).set(stopData, { merge: true });
-                console.log('🛑 Rastreamento parado no Firebase');
+                console.log('🛑 Firebase: Rastreamento parado');
+                updateConnectionStatus(true);
             } catch (error) {
                 console.error('❌ Erro ao parar no Firebase:', error);
+                updateConnectionStatus(false);
             }
         }
 
@@ -582,18 +665,23 @@
                 syncStatus.className = 'sync-status';
                 
                 if (type === 'firebase') {
+                    syncStatus.style.background = '#d4edda';
+                    syncStatus.style.borderLeftColor = '#28a745';
+                    syncStatusText.innerHTML = `<strong>${message}</strong>`;
+                } else if (type === 'error') {
+                    syncStatus.style.background = '#f8d7da';
+                    syncStatus.style.borderLeftColor = '#dc3545';
+                    syncStatusText.innerHTML = `<strong>${message}</strong>`;
+                } else {
                     syncStatus.style.background = '#fff3cd';
                     syncStatus.style.borderLeftColor = '#ffc107';
-                } else if (type === 'error') {
-                    syncStatus.style.background = '#ffeaea';
-                    syncStatus.style.borderLeftColor = '#DB4437';
+                    syncStatusText.textContent = message;
                 }
-                syncStatusText.textContent = message;
             }
         }
 
         // =============================================
-        // SISTEMA DE RASTREAMENTO MOBILE
+        // SISTEMA DE RASTREAMENTO MOBILE (ATUALIZADO)
         // =============================================
 
         function toggleTracking() {
@@ -613,7 +701,7 @@
                 return;
             }
 
-            showLoading('Solicitando permissão de localização...');
+            showLoading('📍 Obtendo sua localização...');
 
             const geoOptions = {
                 enableHighAccuracy: true,
@@ -621,11 +709,25 @@
                 maximumAge: 0
             };
 
+            // Primeiro obtenha a posição atual
             navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    console.log('✅ Permissão concedida! Posição obtida:', position.coords);
+                function(initialPosition) {
+                    console.log('✅ PERMISSÃO CONCEDIDA! Posição inicial:', initialPosition.coords);
                     hideLoading();
+                    
+                    // Salvar posição inicial imediatamente
+                    const initialPos = {
+                        lat: initialPosition.coords.latitude,
+                        lng: initialPosition.coords.longitude
+                    };
+                    
+                    saveDriverPositionToFirebase(initialPosition);
+                    updateMapPosition(initialPos);
+                    updateInterface(initialPosition);
+                    
+                    // Iniciar monitoramento contínuo
                     initWatchPosition();
+                    
                 },
                 function(error) {
                     hideLoading();
@@ -636,41 +738,53 @@
         }
 
         function initWatchPosition() {
-            console.log('🎯 INICIANDO WATCH POSITION...');
+            console.log('🎯 INICIANDO MONITORAMENTO CONTÍNUO...');
             
             const watchOptions = {
                 enableHighAccuracy: true,
                 timeout: 15000,
-                maximumAge: 1000
+                maximumAge: 5000,
+                distanceFilter: 10 // Atualizar a cada 10 metros
             };
 
             driverTrackingInterval = navigator.geolocation.watchPosition(
                 function(position) {
-                    console.log('📍 Nova posição detectada:', position.coords);
+                    console.log('📍 NOVA POSIÇÃO DETECTADA:', {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        speed: position.coords.speed
+                    });
                     
                     const pos = {
                         lat: position.coords.latitude,
                         lng: position.coords.longitude
                     };
 
+                    // Atualizar Firebase
                     saveDriverPositionToFirebase(position);
+                    
+                    // Atualizar mapa e interface
                     updateMapPosition(pos);
                     updateInterface(position);
 
+                    // Resetar contador de atualização
                     updateSeconds = 0;
                     document.getElementById('update-seconds').textContent = '0 segundos';
 
                 },
                 function(error) {
+                    console.error('❌ ERRO NO MONITORAMENTO:', error);
                     handleGeolocationError(error);
                 },
                 watchOptions
             );
 
+            // Atualizar interface
             isDriverTracking = true;
-            document.getElementById('tracking-btn').textContent = 'Parar Rastreamento';
+            document.getElementById('tracking-btn').textContent = '🛑 Parar Rastreamento';
             document.getElementById('tracking-btn').classList.add('tracking-active');
-            document.getElementById('tracking-status').textContent = 'ATIVO';
+            document.getElementById('tracking-status').textContent = 'ATIVO 🟢';
             document.getElementById('status-indicator').className = 'status-indicator tracking-on';
 
             startUpdateTimer();
@@ -680,23 +794,38 @@
         }
 
         function updateMapPosition(pos) {
-            if (!map) return;
+            if (!map) {
+                console.log('❌ Mapa não disponível');
+                return;
+            }
 
             const newLatLng = new google.maps.LatLng(pos.lat, pos.lng);
             
             if (driverMarker) {
+                // Animação suave de movimento
                 driverMarker.setPosition(newLatLng);
+                driverMarker.setTitle(`${currentDriverName} - Online (${new Date().toLocaleTimeString()})`);
             } else {
+                // Criar marcador inicial
                 driverMarker = new google.maps.Marker({
                     map: map,
                     position: newLatLng,
-                    title: `${currentDriverName} - Em movimento`,
+                    title: `${currentDriverName} - Online`,
                     icon: getTaxiIcon(),
-                    optimized: true
+                    optimized: false, // Melhor controle
+                    zIndex: 1000
                 });
+                
+                console.log('📍 Marcador do motorista criado no mapa');
             }
             
-            map.panTo(newLatLng);
+            // Centralizar mapa na posição do motorista (apenas na primeira vez)
+            if (!lastPosition) {
+                map.panTo(newLatLng);
+                map.setZoom(16);
+            }
+            
+            lastPosition = pos;
         }
 
         function updateInterface(position) {
@@ -705,12 +834,18 @@
                 lng: position.coords.longitude
             };
 
+            // Atualizar coordenadas
             document.getElementById('coordinates').textContent = 
-                `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+                `Lat: ${pos.lat.toFixed(6)}\nLng: ${pos.lng.toFixed(6)}\nPrecisão: ${position.coords.accuracy}m`;
 
+            // Atualizar endereço
             updateAddressInfo(new google.maps.LatLng(pos.lat, pos.lng));
 
-            lastPosition = pos;
+            // Atualizar informações adicionais
+            if (position.coords.speed && position.coords.speed > 0) {
+                const speedKmh = (position.coords.speed * 3.6).toFixed(1);
+                document.getElementById('tracking-status').textContent = `ATIVO 🟢 (${speedKmh} km/h)`;
+            }
         }
 
         function handleGeolocationError(error) {
@@ -732,10 +867,11 @@
                     break;
             }
             
-            console.error('❌ Erro GPS:', errorMessage, error);
+            console.error('❌ ERRO GPS:', errorMessage, error);
             updateSyncStatus('error', `GPS: ${errorMessage}`);
             
-            alert(`Erro no GPS: ${errorMessage}\n\n${errorDetails}\n\nCódigo do erro: ${error.code}`);
+            // Alert mais informativo
+            alert(`🚫 Erro no GPS\n\n${errorMessage}\n\n${errorDetails}\n\nCódigo: ${error.code}`);
             
             if (isDriverTracking) {
                 stopDriverTracking();
@@ -745,24 +881,30 @@
         function stopDriverTracking() {
             console.log('🛑 PARANDO RASTREAMENTO...');
             
+            // Parar monitoramento GPS
             if (driverTrackingInterval && navigator.geolocation) {
                 navigator.geolocation.clearWatch(driverTrackingInterval);
                 driverTrackingInterval = null;
             }
             
+            // Parar timer de atualização
             if (updateTimer) {
                 clearInterval(updateTimer);
                 updateTimer = null;
             }
             
+            // Atualizar Firebase
             stopDriverTrackingInFirebase();
             
+            // Resetar estado
             isDriverTracking = false;
             syncCounter = 0;
+            lastPosition = null;
             
-            document.getElementById('tracking-btn').textContent = 'Iniciar Rastreamento';
+            // Atualizar interface
+            document.getElementById('tracking-btn').textContent = '📍 Iniciar Rastreamento';
             document.getElementById('tracking-btn').classList.remove('tracking-active');
-            document.getElementById('tracking-status').textContent = 'INATIVO';
+            document.getElementById('tracking-status').textContent = 'INATIVO 🔴';
             document.getElementById('status-indicator').className = 'status-indicator tracking-off';
             document.getElementById('update-seconds').textContent = '-- segundos';
             
@@ -781,6 +923,12 @@
                 if (updateElement) {
                     updateElement.textContent = updateSeconds + ' segundos';
                 }
+                
+                // Verificar se Firebase está respondendo
+                if (updateSeconds > 30 && isFirebaseConnected) {
+                    updateSyncStatus('error', 'Firebase: Sem atualização recente');
+                    updateConnectionStatus(false);
+                }
             }, 1000);
         }
 
@@ -791,7 +939,10 @@
                 const geocoder = new google.maps.Geocoder();
                 geocoder.geocode({ location: position }, function(results, status) {
                     if (status === 'OK' && results[0]) {
-                        address.textContent = results[0].formatted_address;
+                        // Formatar endereço para mostrar apenas informações principais
+                        const formattedAddress = results[0].formatted_address;
+                        const shortAddress = formattedAddress.split(',')[0] + ', ' + formattedAddress.split(',')[1];
+                        address.textContent = shortAddress || formattedAddress;
                     } else {
                         address.textContent = "Buscando endereço...";
                     }
@@ -811,28 +962,29 @@
             
             return {
                 url: `data:image/svg+xml;base64,${btoa(`
-                    <svg width="45" height="45" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="22" cy="22" r="20" fill="${color}" stroke="#000" stroke-width="2"/>
-                        <text x="22" y="28" text-anchor="middle" fill="#000" font-weight="bold" font-size="14">🚕</text>
+                    <svg width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="25" cy="25" r="22" fill="${color}" stroke="#000" stroke-width="2"/>
+                        <text x="25" y="32" text-anchor="middle" fill="#000" font-weight="bold" font-size="16">🚕</text>
+                        <circle cx="38" cy="12" r="6" fill="#0F9D58" stroke="#fff" stroke-width="1.5"/>
                     </svg>
                 `)}`,
-                scaledSize: new google.maps.Size(45, 45),
-                anchor: new google.maps.Point(22, 22)
+                scaledSize: new google.maps.Size(50, 50),
+                anchor: new google.maps.Point(25, 25)
             };
         }
 
         // =============================================
-        // INICIALIZAÇÃO MOBILE
+        // INICIALIZAÇÃO MOBILE (ATUALIZADA)
         // =============================================
 
         function initMap() {
-            console.log('🗺️ Inicializando mapa mobile...');
+            console.log('🗺️ INICIALIZANDO MAPA MOBILE...');
             
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
             const mapOptions = {
                 center: { lat: 38.7223, lng: -9.1393 },
-                zoom: isMobile ? 13 : 12,
+                zoom: isMobile ? 15 : 14,
                 mapTypeId: google.maps.MapTypeId.ROADMAP,
                 fullscreenControl: true,
                 streetViewControl: false,
@@ -841,7 +993,13 @@
                 zoomControlOptions: {
                     position: google.maps.ControlPosition.RIGHT_BOTTOM
                 },
-                gestureHandling: 'greedy'
+                gestureHandling: 'greedy',
+                styles: [
+                    {
+                        "featureType": "poi",
+                        "stylers": [{"visibility": "off"}]
+                    }
+                ]
             };
             
             map = new google.maps.Map(document.getElementById('map'), mapOptions);
@@ -852,6 +1010,7 @@
             // Detectar motorista logado
             detectDriver();
             
+            // Configurar botões
             trackingBtn.addEventListener('click', function() {
                 console.log('🔄 Botão de rastreamento clicado');
                 toggleTracking();
@@ -861,21 +1020,24 @@
                 vibrate();
                 if (confirm('Deseja sair da área do motorista?')) {
                     if (isDriverTracking) {
-                        console.log('🚗 Saindo com rastreamento ativo');
+                        console.log('🚗 Saindo com rastreamento ativo - parando...');
+                        stopDriverTracking();
                     }
                     setTimeout(() => {
                         window.location.href = 'index.html';
-                    }, 500);
+                    }, 1000);
                 }
             });
             
+            // Otimizações mobile
             map.setOptions({
                 gestureHandling: 'cooperative'
             });
             
+            // Testar conexão Firebase
             testFirebaseConnection();
             
-            console.log('✅ Mapa inicializado com sucesso');
+            console.log('✅ MAPA INICIALIZADO COM SUCESSO');
         }
         
         async function testFirebaseConnection() {
@@ -884,12 +1046,16 @@
                 const doc = await docRef.get();
                 
                 if (doc.exists) {
-                    updateSyncStatus('firebase', 'Firebase: Conectado');
+                    updateSyncStatus('firebase', 'Firebase: Conectado e pronto');
+                    updateConnectionStatus(true);
                 } else {
                     updateSyncStatus('firebase', 'Firebase: Pronto para rastrear');
+                    updateConnectionStatus(true);
                 }
             } catch (error) {
+                console.error('❌ Teste de conexão Firebase falhou:', error);
                 updateSyncStatus('error', 'Firebase: Erro de conexão');
+                updateConnectionStatus(false);
             }
         }
 
@@ -901,16 +1067,50 @@
             document.head.appendChild(script);
         }
         
+        // =============================================
+        // INICIALIZAÇÃO E GERENCIAMENTO DE RECURSOS
+        // =============================================
+        
         window.onload = function() {
             console.log('📱 GoTáxi - Área do motorista carregada');
             loadGoogleMaps();
         };
 
+        // Gerenciar visibilidade da página
         window.addEventListener('visibilitychange', function() {
             if (document.hidden) {
                 console.log('📱 Página em segundo plano');
+                if (isDriverTracking) {
+                    console.log('📍 Rastreamento continua em segundo plano');
+                }
             } else {
                 console.log('📱 Página em primeiro plano');
+                // Recarregar status ao retornar
+                if (isDriverTracking) {
+                    updateSyncStatus('firebase', `Firebase: Sincronizado ${syncCounter}x`);
+                }
+            }
+        });
+
+        // Monitorar conexão de rede
+        window.addEventListener('online', function() {
+            console.log('🌐 Conexão restaurada');
+            updateConnectionStatus(true);
+            testFirebaseConnection();
+        });
+
+        window.addEventListener('offline', function() {
+            console.log('📡 Conexão perdida');
+            updateConnectionStatus(false);
+            updateSyncStatus('error', 'Sem conexão com a internet');
+        });
+
+        // Prevenir saída acidental
+        window.addEventListener('beforeunload', function(e) {
+            if (isDriverTracking) {
+                e.preventDefault();
+                e.returnValue = 'O rastreamento está ativo. Tem certeza que deseja sair?';
+                return 'O rastreamento está ativo. Tem certeza que deseja sair?';
             }
         });
     </script>
