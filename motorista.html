@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Área do Motorista - LisboaGo</title>
+    <title>Área do Motorista - GoTáxi</title>
     
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -345,7 +345,7 @@
     <header>
         <div class="header-content">
             <div class="logo">
-                <h1>LisboaGo - Motorista</h1>
+                <h1>GoTáxi - Motorista</h1>
                 <p>Bem-vindo à sua área</p>
             </div>
             <button class="logout-btn" id="logout-btn">Sair</button>
@@ -369,8 +369,8 @@
                     <span class="info-value" id="driver-name">--</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Email:</span>
-                    <span class="info-value">megahairbb@hotmail.com</span>
+                    <span class="info-label">ID:</span>
+                    <span class="info-value" id="driver-id">--</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Status:</span>
@@ -416,9 +416,9 @@
     <footer>
         <div class="footer-content">
             <div class="footer-section">
-                <h3>LisboaGo</h3>
+                <h3>GoTáxi</h3>
                 <p>Serviço de táxi confiável em Lisboa</p>
-                <p>Email: lisboagopt@hotmail.com</p>
+                <p>Email: gotaxipt@hotmail.com</p>
             </div>
             
             <div class="footer-section">
@@ -438,7 +438,7 @@
         </div>
         
         <div class="footer-bottom">
-            <p>© 2025 LisboaGo. Todos os direitos reservados.</p>
+            <p>© 2025 GoTáxi. Todos os direitos reservados.</p>
         </div>
     </footer>
 
@@ -470,7 +470,8 @@
         let updateSeconds = 0;
         let lastPosition = null;
         let syncCounter = 0;
-        let currentDriverId = 'motorista_mega'; // Padrão Mega
+        let currentDriverId = '';
+        let currentDriverName = '';
 
         // =============================================
         // FUNÇÕES MOBILE
@@ -492,6 +493,39 @@
         }
 
         // =============================================
+        // DETECTAR MOTORISTA LOGADO
+        // =============================================
+
+        function detectDriver() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const driverParam = urlParams.get('driver');
+            
+            const driverConfigs = {
+                'motorista_mega': { name: 'Mega Hair', email: 'megahairbb@hotmail.com' },
+                'motorista_heitor': { name: 'Heitor Silva', email: 'heitor@gotaxi.pt' },
+                'motorista_joao': { name: 'João Santos', email: 'joao@gotaxi.pt' },
+                'motorista_maria': { name: 'Maria Oliveira', email: 'maria@gotaxi.pt' }
+            };
+
+            if (driverParam && driverConfigs[driverParam]) {
+                currentDriverId = driverParam;
+                currentDriverName = driverConfigs[driverParam].name;
+                
+                document.getElementById('driver-name').textContent = currentDriverName;
+                document.getElementById('driver-id').textContent = currentDriverId;
+                
+                console.log(`🚕 Motorista detectado: ${currentDriverName} (${currentDriverId})`);
+            } else {
+                // Default fallback
+                currentDriverId = 'motorista_mega';
+                currentDriverName = 'Mega Hair';
+                document.getElementById('driver-name').textContent = currentDriverName;
+                document.getElementById('driver-id').textContent = currentDriverId;
+                console.log('⚠️ Motorista não especificado, usando padrão');
+            }
+        }
+
+        // =============================================
         // SISTEMA FIREBASE
         // =============================================
 
@@ -504,7 +538,7 @@
                 },
                 timestamp: Date.now(),
                 driverId: currentDriverId,
-                driverName: currentDriverId === 'motorista_mega' ? 'Mega Hair' : 'Heitor',
+                driverName: currentDriverName,
                 lastUpdate: new Date().toLocaleTimeString('pt-BR'),
                 accuracy: position.coords.accuracy
             };
@@ -520,8 +554,7 @@
             } catch (error) {
                 console.error('❌ Erro no Firebase:', error);
                 updateSyncStatus('error', 'Erro no Firebase');
-                // Salvar localmente como backup
-                localStorage.setItem('lisboago_driver_data', JSON.stringify(driverData));
+                localStorage.setItem('gotaxi_driver_data', JSON.stringify(driverData));
             }
         }
 
@@ -546,7 +579,6 @@
             const syncStatusText = document.getElementById('sync-status-text');
             
             if (syncStatus && syncStatusText) {
-                // Remover classes anteriores
                 syncStatus.className = 'sync-status';
                 
                 if (type === 'firebase') {
@@ -561,7 +593,7 @@
         }
 
         // =============================================
-        // SISTEMA DE RASTREAMENTO MOBILE - CORRIGIDO
+        // SISTEMA DE RASTREAMENTO MOBILE
         // =============================================
 
         function toggleTracking() {
@@ -574,7 +606,7 @@
         }
 
         function startDriverTracking() {
-            console.log('🚕 TENTANDO INICIAR RASTREAMENTO...');
+            console.log(`🚕 ${currentDriverName} INICIANDO RASTREAMENTO...`);
             
             if (!navigator.geolocation) {
                 alert('❌ Seu navegador não suporta geolocalização.');
@@ -583,24 +615,18 @@
 
             showLoading('Solicitando permissão de localização...');
 
-            // CONFIGURAÇÃO SIMPLIFICADA E FUNCIONAL
             const geoOptions = {
                 enableHighAccuracy: true,
-                timeout: 10000, // 10 segundos de timeout
+                timeout: 10000,
                 maximumAge: 0
             };
 
-            // Primeiro: Solicitar permissão e obter posição atual
             navigator.geolocation.getCurrentPosition(
-                // Sucesso
                 function(position) {
                     console.log('✅ Permissão concedida! Posição obtida:', position.coords);
                     hideLoading();
-                    
-                    // Iniciar watchPosition após permissão concedida
                     initWatchPosition();
                 },
-                // Erro
                 function(error) {
                     hideLoading();
                     handleGeolocationError(error);
@@ -612,15 +638,13 @@
         function initWatchPosition() {
             console.log('🎯 INICIANDO WATCH POSITION...');
             
-            // Configuração do watchPosition
             const watchOptions = {
                 enableHighAccuracy: true,
-                timeout: 15000, // 15 segundos
-                maximumAge: 1000 // Atualizar a cada 1 segundo
+                timeout: 15000,
+                maximumAge: 1000
             };
 
             driverTrackingInterval = navigator.geolocation.watchPosition(
-                // Sucesso - Nova posição detectada
                 function(position) {
                     console.log('📍 Nova posição detectada:', position.coords);
                     
@@ -629,34 +653,25 @@
                         lng: position.coords.longitude
                     };
 
-                    // Atualizar Firebase
                     saveDriverPositionToFirebase(position);
-
-                    // Atualizar mapa
                     updateMapPosition(pos);
-
-                    // Atualizar interface
                     updateInterface(position);
 
-                    // Resetar contador
                     updateSeconds = 0;
                     document.getElementById('update-seconds').textContent = '0 segundos';
 
                 },
-                // Erro
                 function(error) {
                     handleGeolocationError(error);
                 },
                 watchOptions
             );
 
-            // Atualizar interface para mostrar que está ativo
             isDriverTracking = true;
             document.getElementById('tracking-btn').textContent = 'Parar Rastreamento';
             document.getElementById('tracking-btn').classList.add('tracking-active');
             document.getElementById('tracking-status').textContent = 'ATIVO';
             document.getElementById('status-indicator').className = 'status-indicator tracking-on';
-            document.getElementById('driver-name').textContent = currentDriverId === 'motorista_mega' ? 'Mega Hair' : 'Heitor';
 
             startUpdateTimer();
             updateSyncStatus('firebase', 'Firebase: Sincronização ATIVA!');
@@ -675,13 +690,12 @@
                 driverMarker = new google.maps.Marker({
                     map: map,
                     position: newLatLng,
-                    title: 'Sua localização atual - Em movimento',
+                    title: `${currentDriverName} - Em movimento`,
                     icon: getTaxiIcon(),
                     optimized: true
                 });
             }
             
-            // Centralizar mapa suavemente
             map.panTo(newLatLng);
         }
 
@@ -691,11 +705,9 @@
                 lng: position.coords.longitude
             };
 
-            // Atualizar coordenadas
             document.getElementById('coordinates').textContent = 
                 `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
 
-            // Atualizar endereço
             updateAddressInfo(new google.maps.LatLng(pos.lat, pos.lng));
 
             lastPosition = pos;
@@ -721,14 +733,10 @@
             }
             
             console.error('❌ Erro GPS:', errorMessage, error);
-            
-            // Atualizar status de erro
             updateSyncStatus('error', `GPS: ${errorMessage}`);
             
-            // Mostrar alerta mais informativo
             alert(`Erro no GPS: ${errorMessage}\n\n${errorDetails}\n\nCódigo do erro: ${error.code}`);
             
-            // Parar rastreamento se estava ativo
             if (isDriverTracking) {
                 stopDriverTracking();
             }
@@ -737,22 +745,18 @@
         function stopDriverTracking() {
             console.log('🛑 PARANDO RASTREAMENTO...');
             
-            // Parar watchPosition
             if (driverTrackingInterval && navigator.geolocation) {
                 navigator.geolocation.clearWatch(driverTrackingInterval);
                 driverTrackingInterval = null;
             }
             
-            // Parar timer de atualização
             if (updateTimer) {
                 clearInterval(updateTimer);
                 updateTimer = null;
             }
             
-            // Parar no Firebase
             stopDriverTrackingInFirebase();
             
-            // Atualizar interface
             isDriverTracking = false;
             syncCounter = 0;
             
@@ -796,8 +800,22 @@
         }
 
         function getTaxiIcon() {
+            const colors = {
+                'motorista_mega': '#FFD700',
+                'motorista_heitor': '#FF6B6B', 
+                'motorista_joao': '#4ECDC4',
+                'motorista_maria': '#FFA5A5'
+            };
+            
+            const color = colors[currentDriverId] || '#FFD700';
+            
             return {
-                url: 'https://cdn-icons-png.flaticon.com/128/16062/16062688.png',
+                url: `data:image/svg+xml;base64,${btoa(`
+                    <svg width="45" height="45" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="22" cy="22" r="20" fill="${color}" stroke="#000" stroke-width="2"/>
+                        <text x="22" y="28" text-anchor="middle" fill="#000" font-weight="bold" font-size="14">🚕</text>
+                    </svg>
+                `)}`,
                 scaledSize: new google.maps.Size(45, 45),
                 anchor: new google.maps.Point(22, 22)
             };
@@ -831,27 +849,14 @@
             const trackingBtn = document.getElementById('tracking-btn');
             const logoutBtn = document.getElementById('logout-btn');
             
-            // Detectar qual motorista está logado
-            function detectDriver() {
-                const urlParams = new URLSearchParams(window.location.search);
-                const user = urlParams.get('user');
-                
-                if (user === 'heitor') {
-                    currentDriverId = 'motorista_heitor';
-                    document.getElementById('driver-name').textContent = 'Heitor';
-                } else {
-                    currentDriverId = 'motorista_mega';
-                    document.getElementById('driver-name').textContent = 'Mega Hair';
-                }
-            }
+            // Detectar motorista logado
+            detectDriver();
             
-            // Configurar botão de rastreamento
             trackingBtn.addEventListener('click', function() {
                 console.log('🔄 Botão de rastreamento clicado');
                 toggleTracking();
             });
             
-            // Configurar botão de logout
             logoutBtn.addEventListener('click', function() {
                 vibrate();
                 if (confirm('Deseja sair da área do motorista?')) {
@@ -864,12 +869,10 @@
                 }
             });
             
-            // Prevenir zoom duplo
             map.setOptions({
                 gestureHandling: 'cooperative'
             });
             
-            detectDriver();
             testFirebaseConnection();
             
             console.log('✅ Mapa inicializado com sucesso');
@@ -898,13 +901,11 @@
             document.head.appendChild(script);
         }
         
-        // INICIALIZAÇÃO
         window.onload = function() {
-            console.log('📱 Página do motorista carregada');
+            console.log('📱 GoTáxi - Área do motorista carregada');
             loadGoogleMaps();
         };
 
-        // Gerenciar eventos de visibilidade
         window.addEventListener('visibilitychange', function() {
             if (document.hidden) {
                 console.log('📱 Página em segundo plano');

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LisboaGo - Seu Táxi em Lisboa</title>
+    <title>GoTáxi - Seu Táxi em Lisboa</title>
     
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -151,7 +151,7 @@
             color: #1976d2;
         }
         
-        /* Botão Chame LisboaGo Mobile */
+        /* Botão Chame GoTáxi Mobile */
         .call-taxi-section {
             position: fixed;
             bottom: 20px;
@@ -299,7 +299,7 @@
     <!-- Cabeçalho -->
     <header>
         <div class="logo">
-            <h1>LisboaGo</h1>
+            <h1>GoTáxi</h1>
             <p>Seu Táxi Em Lisboa</p>
         </div>
         <button class="driver-area-btn" id="driver-area-btn">Motorista</button>
@@ -328,10 +328,10 @@
         </div>
     </div>
     
-    <!-- Botão Chame LisboaGo -->
+    <!-- Botão Chame GoTáxi -->
     <div class="call-taxi-section">
         <button class="btn-call-taxi" id="call-taxi-btn">
-            🚕 Chamar LisboaGo - €0,50
+            🚕 Chamar GoTáxi - €0,50
         </button>
     </div>
     
@@ -379,8 +379,8 @@
         // VARIÁVEIS GLOBAIS
         // =============================================
         let map;
-        let driverMarker = null;
-        let lastDriverPosition = null;
+        let driverMarkers = {}; // Objeto para armazenar múltiplos motoristas
+        let lastDriverPositions = {}; // Últimas posições de cada motorista
         let directionsService = null;
         let directionsRenderer = null;
         let driverToClientRenderer = null;
@@ -410,45 +410,51 @@
         }
 
         // =============================================
-        // SISTEMA FIREBASE - ESCUTA CONTÍNUA
+        // SISTEMA FIREBASE - MULTIPLOS MOTORISTAS
         // =============================================
 
         function setupFirebaseListener() {
-            console.log('👂 Iniciando escuta Firebase em tempo real...');
+            console.log('👂 Iniciando escuta Firebase para múltiplos motoristas...');
             
             try {
-                // ESCUTAR TODOS OS MOTORISTAS ATIVOS - SEM FILTRO DE TEMPO
+                // ESCUTAR TODOS OS MOTORISTAS ATIVOS
                 firebaseListener = db.collection('drivers')
                     .onSnapshot(function(snapshot) {
                         snapshot.docChanges().forEach(function(change) {
+                            const driverId = change.doc.id;
+                            const driverData = change.doc.data();
+                            
                             if (change.type === 'added' || change.type === 'modified') {
-                                const driverData = change.doc.data();
-                                
                                 // VERIFICAR SE O MOTORISTA ESTÁ ATIVO
                                 if (driverData.isTracking && driverData.position) {
                                     const newPosition = driverData.position;
+                                    const driverName = driverData.driverName || 'Motorista';
                                     
-                                    console.log('📍 Motorista ativo detectado:', driverData.driverName, newPosition);
+                                    console.log(`📍 Motorista ativo detectado: ${driverName} (${driverId})`, newPosition);
                                     
-                                    const positionChanged = !lastDriverPosition || 
-                                        getDistance(lastDriverPosition, newPosition) > 1;
+                                    const positionChanged = !lastDriverPositions[driverId] || 
+                                        getDistance(lastDriverPositions[driverId], newPosition) > 1;
                                     
                                     if (positionChanged) {
-                                        console.log('📍 FIREBASE - Posição atualizada:', newPosition);
+                                        console.log(`📍 FIREBASE - ${driverName} atualizado:`, newPosition);
                                         
-                                        updateDriverMarker(newPosition);
+                                        updateDriverMarker(driverId, driverName, newPosition);
                                         
                                         if (clientPosition) {
                                             calculateDriverToClientRoute(newPosition, clientPosition);
                                         }
                                         
-                                        lastDriverPosition = newPosition;
+                                        lastDriverPositions[driverId] = newPosition;
                                     }
+                                } else {
+                                    // Motorista não está mais ativo, remover marcador
+                                    removeDriverMarker(driverId);
+                                    delete lastDriverPositions[driverId];
                                 }
                             } else if (change.type === 'removed') {
-                                console.log('🚫 Motorista removido do Firebase');
-                                removeDriverMarker();
-                                removeDriverToClientRoute();
+                                console.log(`🚫 Motorista removido do Firebase: ${driverId}`);
+                                removeDriverMarker(driverId);
+                                delete lastDriverPositions[driverId];
                             }
                         });
                     }, function(error) {
@@ -470,28 +476,61 @@
         }
 
         // =============================================
-        // FUNÇÕES DO MAPA
+        // FUNÇÕES DO MAPA - MULTIPLOS MOTORISTAS
         // =============================================
 
-        function updateDriverMarker(newPosition) {
+        function updateDriverMarker(driverId, driverName, newPosition) {
             if (!map) return;
             
             const newLatLng = new google.maps.LatLng(newPosition.lat, newPosition.lng);
             
-            if (driverMarker) {
-                // Atualização direta para melhor performance
-                driverMarker.setPosition(newLatLng);
+            if (driverMarkers[driverId]) {
+                // Atualizar marcador existente
+                driverMarkers[driverId].setPosition(newLatLng);
+                driverMarkers[driverId].setTitle(`${driverName} - Em movimento`);
             } else {
-                driverMarker = new google.maps.Marker({
+                // Criar novo marcador
+                driverMarkers[driverId] = new google.maps.Marker({
                     map: map,
                     position: newLatLng,
-                    title: 'Motorista LisboaGo - Em movimento',
-                    icon: getTaxiIcon(),
+                    title: `${driverName} - Em movimento`,
+                    icon: getTaxiIcon(driverId), // Ícone único por motorista
                     optimized: true
                 });
                 
-                console.log('🚕 Marcador do motorista criado no mapa');
+                console.log(`🚕 Marcador criado para ${driverName}`);
             }
+        }
+
+        function removeDriverMarker(driverId) {
+            if (driverMarkers[driverId]) {
+                driverMarkers[driverId].setMap(null);
+                delete driverMarkers[driverId];
+                console.log(`🚫 Marcador removido para motorista ${driverId}`);
+            }
+        }
+
+        function getTaxiIcon(driverId) {
+            // Cores diferentes para cada motorista
+            const colors = {
+                'motorista_mega': '#FFD700', // Amarelo
+                'motorista_heitor': '#FF6B6B', // Vermelho
+                'motorista_joao': '#4ECDC4', // Verde água
+                'motorista_maria': '#FFA5A5'  // Rosa
+            };
+            
+            const color = colors[driverId] || '#FFD700'; // Default amarelo
+            
+            return {
+                url: `data:image/svg+xml;base64,${btoa(`
+                    <svg width="45" height="45" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="22" cy="22" r="20" fill="${color}" stroke="#000" stroke-width="2"/>
+                        <text x="22" y="28" text-anchor="middle" fill="#000" font-weight="bold" font-size="14">🚕</text>
+                    </svg>
+                `)}`,
+                scaledSize: new google.maps.Size(45, 45),
+                anchor: new google.maps.Point(22, 22)
+            };
         }
 
         function getDistance(pos1, pos2) {
@@ -542,22 +581,6 @@
             }
         }
 
-        function removeDriverMarker() {
-            if (driverMarker) {
-                driverMarker.setMap(null);
-                driverMarker = null;
-                console.log('🚫 Marcador do motorista removido');
-            }
-        }
-
-        function getTaxiIcon() {
-            return {
-                url: 'https://cdn-icons-png.flaticon.com/128/16062/16062688.png',
-                scaledSize: new google.maps.Size(45, 45),
-                anchor: new google.maps.Point(22, 22)
-            };
-        }
-
         function getClientIcon() {
             return {
                 url: 'https://cdn-icons-png.flaticon.com/128/7324/7324835.png',
@@ -603,7 +626,7 @@
                         duration: duration,
                         distance: distance
                     };
-                    localStorage.setItem('lisboago_route_data', JSON.stringify(routeData));
+                    localStorage.setItem('gotaxi_route_data', JSON.stringify(routeData));
                     
                     vibrate();
                     
@@ -615,7 +638,7 @@
         }
 
         // =============================================
-        // INICIALIZAÇÃO DO MAPA - COM CORREÇÃO DO BOTÃO MOTORISTA
+        // INICIALIZAÇÃO DO MAPA
         // =============================================
 
         function initMap() {
@@ -665,16 +688,11 @@
             let originPlace = null;
             let destinationPlace = null;
             
-            // CORREÇÃO ESPECÍFICA DO BOTÃO MOTORISTA
+            // CONFIGURAÇÃO DO BOTÃO MOTORISTA
             function setupDriverButton() {
                 console.log('🔧 Configurando botão Motorista...');
                 
-                // Remover event listener anterior se existir
-                driverAreaBtn.replaceWith(driverAreaBtn.cloneNode(true));
-                const newDriverBtn = document.getElementById('driver-area-btn');
-                
-                // Adicionar novo event listener
-                newDriverBtn.addEventListener('click', function(e) {
+                driverAreaBtn.addEventListener('click', function(e) {
                     console.log('🎯 Botão Motorista clicado!');
                     e.preventDefault();
                     e.stopPropagation();
@@ -687,28 +705,21 @@
                         usernameInput.focus();
                     }, 300);
                 });
-                
-                console.log('✅ Botão Motorista configurado com sucesso');
             }
             
             // CORREÇÃO DA SENSIBILIDADE DOS CAMPOS
             function setupInputFields() {
-                // Adicionar evento de toque para todos os campos
                 const allInputs = document.querySelectorAll('input, textarea');
                 allInputs.forEach(input => {
-                    // Remover qualquer prevenção existente
                     input.style.touchAction = 'manipulation';
                     input.style.cursor = 'pointer';
                     
-                    // Evento de toque simples
                     input.addEventListener('touchstart', function(e) {
                         e.preventDefault();
                         this.focus();
-                        // Forçar teclado a aparecer
                         this.click();
                     }, { passive: false });
                     
-                    // Evento de clique como fallback
                     input.addEventListener('click', function() {
                         this.focus();
                     });
@@ -747,10 +758,6 @@
                     if (destinationPlace) {
                         calculateRoute(originPlace.geometry.location, destinationPlace.geometry.location);
                     }
-                    
-                    if (lastDriverPosition) {
-                        calculateDriverToClientRoute(lastDriverPosition, clientPosition);
-                    }
                 });
                 
                 autocompleteDestination.addListener('place_changed', function() {
@@ -782,16 +789,17 @@
                 const username = usernameInput.value;
                 const password = passwordInput.value;
                 
-                // Logins válidos
-                if ((username === 'Mega' && password === '12345') || 
-                    (username === 'Heitor' && password === '12345')) {
-                    
-                    // Redirecionar para a página do motorista com parâmetro
-                    if (username === 'Heitor') {
-                        window.location.href = 'motorista.html?user=heitor';
-                    } else {
-                        window.location.href = 'motorista.html';
-                    }
+                // Logins válidos para múltiplos motoristas
+                const validLogins = {
+                    'Mega': { password: '12345', driverId: 'motorista_mega' },
+                    'Heitor': { password: '12345', driverId: 'motorista_heitor' },
+                    'Joao': { password: '12345', driverId: 'motorista_joao' },
+                    'Maria': { password: '12345', driverId: 'motorista_maria' }
+                };
+                
+                if (validLogins[username] && validLogins[username].password === password) {
+                    const driverId = validLogins[username].driverId;
+                    window.location.href = `motorista.html?driver=${driverId}`;
                 } else {
                     errorMessage.style.display = 'block';
                 }
@@ -820,7 +828,7 @@
                     clientPosition: clientPosition,
                     timestamp: Date.now()
                 };
-                localStorage.setItem('lisboago_current_ride', JSON.stringify(currentData));
+                localStorage.setItem('gotaxi_current_ride', JSON.stringify(currentData));
                 
                 window.location.href = 'chamar-taxi.html';
             });
@@ -830,13 +838,13 @@
                 gestureHandling: 'cooperative'
             });
             
-            // CONFIGURAR BOTÃO MOTORISTA PRIMEIRO
+            // INICIALIZAR COMPONENTES
             setupDriverButton();
             setupInputFields();
             initAutocomplete();
             setupFirebaseListener();
 
-            console.log('✅ Mapa mobile inicializado com sucesso');
+            console.log('✅ Mapa mobile inicializado com sucesso - Múltiplos motoristas ativos');
         }
         
         function loadGoogleMaps() {
@@ -849,7 +857,7 @@
         
         // INICIALIZAÇÃO
         window.onload = function() {
-            console.log('📱 Página mobile carregada');
+            console.log('📱 GoTáxi - Página mobile carregada');
             loadGoogleMaps();
         };
 

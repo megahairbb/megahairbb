@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chamar Táxi - LisboaGo</title>
+    <title>Chamar Táxi - GoTáxi</title>
     <script src="https://js.stripe.com/v3/"></script>
     <style>
         * {
@@ -296,7 +296,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>LisboaGo</h1>
+            <h1>GoTáxi</h1>
             <p>Chame seu táxi em Lisboa</p>
         </div>
         
@@ -491,7 +491,7 @@
         function loadSavedRouteData() {
             try {
                 // Carregar dados da rota calculada
-                const routeData = localStorage.getItem('lisboago_route_data');
+                const routeData = localStorage.getItem('gotaxi_route_data');
                 if (routeData) {
                     const data = JSON.parse(routeData);
                     
@@ -506,7 +506,7 @@
                 }
                 
                 // Carregar endereços salvos
-                const currentData = localStorage.getItem('lisboago_current_ride');
+                const currentData = localStorage.getItem('gotaxi_current_ride');
                 if (currentData) {
                     const data = JSON.parse(currentData);
                     document.getElementById('origem').value = data.origin || '';
@@ -582,7 +582,7 @@
                     timestamp: Date.now()
                 };
                 
-                localStorage.setItem('lisboago_current_ride', JSON.stringify(currentData));
+                localStorage.setItem('gotaxi_current_ride', JSON.stringify(currentData));
                 console.log('💾 Dados da corrida salvos:', currentData);
             }
         }
@@ -651,7 +651,7 @@
                     submitBtn.textContent = 'Pagar €0,50';
                     
                     // Salvar confirmação do pagamento
-                    localStorage.setItem('lisboago_payment_confirmed', 'true');
+                    localStorage.setItem('gotaxi_payment_confirmed', 'true');
                     
                 }, 2000);
                 
@@ -679,7 +679,7 @@
             const routeTimeText = routeTime.textContent;
             const routeDistanceText = routeDistance.textContent;
             
-            const message = `🚕 *NOVA SOLICITAÇÃO DE TÁXI - LisboaGo* 🚕
+            const message = `🚕 *NOVA SOLICITAÇÃO DE TÁXI - GoTáxi* 🚕
             
 *Nome:* ${formData.nome}
 *Contato:* ${formData.contato}
@@ -719,7 +719,7 @@ ${formData.observacao ? `*Observações:* ${formData.observacao}` : ''}
             loadSavedRouteData();
             
             // Limpar confirmação de pagamento anterior ao carregar a página
-            localStorage.removeItem('lisboago_payment_confirmed');
+            localStorage.removeItem('gotaxi_payment_confirmed');
         };
     </script>
 </body>
