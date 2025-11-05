@@ -369,6 +369,30 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Permissão GPS */
+        .permission-guide {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #2196f3;
+            display: none;
+        }
+
+        .permission-guide h4 {
+            color: #1976d2;
+            margin-bottom: 8px;
+        }
+
+        .permission-steps {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .permission-steps li {
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
@@ -417,6 +441,16 @@
             
             <div class="tracking-section">
                 <h3><span class="status-indicator tracking-off" id="status-indicator"></span> Rastreamento GPS</h3>
+                
+                <div class="permission-guide" id="permission-guide">
+                    <h4>📱 Como permitir localização:</h4>
+                    <ol class="permission-steps">
+                        <li>Clique no ícone de localização na barra de endereço</li>
+                        <li>Selecione "Permitir" ou "Allow"</li>
+                        <li>Recarregue a página se necessário</li>
+                    </ol>
+                </div>
+                
                 <div class="info-item">
                     <span class="info-label">Status:</span>
                     <span class="info-value" id="tracking-status">Inativo</span>
@@ -438,7 +472,7 @@
                     🔥 Firebase: <span id="sync-status-text">Conectando...</span>
                 </div>
                 
-                <button class="tracking-btn" id="tracking-btn">Iniciar Rastreamento</button>
+                <button class="tracking-btn" id="tracking-btn">📍 Iniciar Rastreamento</button>
             </div>
         </div>
     </div>
@@ -511,6 +545,7 @@
         let currentDriverName = '';
         let lastFirebaseUpdate = 0;
         let isFirebaseConnected = false;
+        let hasLocationPermission = false;
 
         // =============================================
         // FUNÇÕES MOBILE
@@ -549,6 +584,14 @@
             }
         }
 
+        function showPermissionGuide() {
+            document.getElementById('permission-guide').style.display = 'block';
+        }
+
+        function hidePermissionGuide() {
+            document.getElementById('permission-guide').style.display = 'none';
+        }
+
         // =============================================
         // DETECTAR MOTORISTA LOGADO
         // =============================================
@@ -583,14 +626,14 @@
         }
 
         // =============================================
-        // SISTEMA FIREBASE (ATUALIZADO)
+        // SISTEMA FIREBASE
         // =============================================
 
         async function saveDriverPositionToFirebase(position) {
             const now = Date.now();
             
-            // Evitar atualizações muito rápidas (mínimo 2 segundos)
-            if (now - lastFirebaseUpdate < 2000) {
+            // Evitar atualizações muito rápidas (mínimo 3 segundos)
+            if (now - lastFirebaseUpdate < 3000) {
                 console.log('⏱️  Firebase: Atualização muito rápida, ignorando...');
                 return;
             }
@@ -681,7 +724,7 @@
         }
 
         // =============================================
-        // SISTEMA DE RASTREAMENTO MOBILE (ATUALIZADO)
+        // SISTEMA DE RASTREAMENTO MOBILE (CORRIGIDO)
         // =============================================
 
         function toggleTracking() {
@@ -701,21 +744,83 @@
                 return;
             }
 
-            showLoading('📍 Obtendo sua localização...');
+            showLoading('📍 Solicitando permissão de localização...');
+            showPermissionGuide();
+
+            // Primeiro verificar se já temos permissão
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    // Já temos permissão, iniciar rastreamento
+                    console.log('✅ PERMISSÃO JÁ CONCEDIDA!');
+                    hidePermissionGuide();
+                    startTrackingWithPermission();
+                },
+                function(error) {
+                    // Não temos permissão, solicitar
+                    console.log('📝 SOLICITANDO PERMISSÃO...');
+                    requestLocationPermission();
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        function requestLocationPermission() {
+            // Método mais direto para solicitar permissão
+            if (navigator.permissions) {
+                navigator.permissions.query({ name: 'geolocation' })
+                    .then(function(permissionStatus) {
+                        console.log('📋 Status da permissão:', permissionStatus.state);
+                        
+                        if (permissionStatus.state === 'granted') {
+                            hidePermissionGuide();
+                            startTrackingWithPermission();
+                        } else if (permissionStatus.state === 'prompt') {
+                            // Mostrar guia de permissão
+                            showPermissionGuide();
+                            hideLoading();
+                            
+                            // Tentar novamente após mostrar o guia
+                            setTimeout(() => {
+                                startTrackingWithPermission();
+                            }, 2000);
+                        } else {
+                            // Permissão negada
+                            hideLoading();
+                            handleGeolocationError({ code: 1 }); // PERMISSION_DENIED
+                        }
+                    })
+                    .catch(function(error) {
+                        console.error('Erro ao verificar permissão:', error);
+                        startTrackingWithPermission(); // Tentar mesmo assim
+                    });
+            } else {
+                // Fallback para navegadores antigos
+                startTrackingWithPermission();
+            }
+        }
+
+        function startTrackingWithPermission() {
+            console.log('🎯 INICIANDO RASTREAMENTO COM PERMISSÃO...');
+            
+            showLoading('Obtendo sua localização...');
 
             const geoOptions = {
                 enableHighAccuracy: true,
-                timeout: 10000,
+                timeout: 15000,
                 maximumAge: 0
             };
 
-            // Primeiro obtenha a posição atual
             navigator.geolocation.getCurrentPosition(
                 function(initialPosition) {
-                    console.log('✅ PERMISSÃO CONCEDIDA! Posição inicial:', initialPosition.coords);
+                    console.log('✅ LOCALIZAÇÃO OBTIDA!', initialPosition.coords);
                     hideLoading();
+                    hidePermissionGuide();
                     
-                    // Salvar posição inicial imediatamente
+                    // Salvar posição inicial
                     const initialPos = {
                         lat: initialPosition.coords.latitude,
                         lng: initialPosition.coords.longitude
@@ -731,6 +836,7 @@
                 },
                 function(error) {
                     hideLoading();
+                    console.error('❌ ERRO AO OBTER LOCALIZAÇÃO INICIAL:', error);
                     handleGeolocationError(error);
                 },
                 geoOptions
@@ -738,22 +844,21 @@
         }
 
         function initWatchPosition() {
-            console.log('🎯 INICIANDO MONITORAMENTO CONTÍNUO...');
+            console.log('🔄 INICIANDO MONITORAMENTO CONTÍNUO...');
             
             const watchOptions = {
                 enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 5000,
-                distanceFilter: 10 // Atualizar a cada 10 metros
+                timeout: 20000,  // Aumentado para 20 segundos
+                maximumAge: 10000, // Aceitar posições de até 10 segundos
+                distanceFilter: 5 // Atualizar a cada 5 metros
             };
 
             driverTrackingInterval = navigator.geolocation.watchPosition(
                 function(position) {
-                    console.log('📍 NOVA POSIÇÃO DETECTADA:', {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                        accuracy: position.coords.accuracy,
-                        speed: position.coords.speed
+                    console.log('📍 POSIÇÃO ATUALIZADA:', {
+                        lat: position.coords.latitude.toFixed(6),
+                        lng: position.coords.longitude.toFixed(6),
+                        accuracy: position.coords.accuracy + 'm'
                     });
                     
                     const pos = {
@@ -812,18 +917,15 @@
                     position: newLatLng,
                     title: `${currentDriverName} - Online`,
                     icon: getTaxiIcon(),
-                    optimized: false, // Melhor controle
+                    optimized: false,
                     zIndex: 1000
                 });
                 
                 console.log('📍 Marcador do motorista criado no mapa');
             }
             
-            // Centralizar mapa na posição do motorista (apenas na primeira vez)
-            if (!lastPosition) {
-                map.panTo(newLatLng);
-                map.setZoom(16);
-            }
+            // Centralizar mapa na posição do motorista
+            map.panTo(newLatLng);
             
             lastPosition = pos;
         }
@@ -836,7 +938,7 @@
 
             // Atualizar coordenadas
             document.getElementById('coordinates').textContent = 
-                `Lat: ${pos.lat.toFixed(6)}\nLng: ${pos.lng.toFixed(6)}\nPrecisão: ${position.coords.accuracy}m`;
+                `Lat: ${pos.lat.toFixed(6)}\nLng: ${pos.lng.toFixed(6)}\nPrecisão: ${Math.round(position.coords.accuracy)}m`;
 
             // Atualizar endereço
             updateAddressInfo(new google.maps.LatLng(pos.lat, pos.lng));
@@ -853,25 +955,27 @@
             let errorDetails = '';
             
             switch(error.code) {
-                case error.PERMISSION_DENIED:
+                case 1: // PERMISSION_DENIED
                     errorMessage = 'Permissão de localização negada';
-                    errorDetails = 'Por favor, permita o acesso à localização nas configurações do seu navegador.';
+                    errorDetails = 'Por favor, permita o acesso à localização nas configurações do seu navegador e recarregue a página.';
+                    showPermissionGuide();
                     break;
-                case error.POSITION_UNAVAILABLE:
+                case 2: // POSITION_UNAVAILABLE
                     errorMessage = 'Localização indisponível';
-                    errorDetails = 'Não foi possível obter a localização. Verifique se o GPS está ativo.';
+                    errorDetails = 'Não foi possível obter a localização. Verifique se o GPS está ativo e tente novamente.';
                     break;
-                case error.TIMEOUT:
+                case 3: // TIMEOUT
                     errorMessage = 'Tempo limite excedido';
-                    errorDetails = 'A solicitação de localização demorou muito. Tente novamente.';
+                    errorDetails = 'A solicitação de localização demorou muito. Verifique sua conexão e tente novamente.';
                     break;
             }
             
             console.error('❌ ERRO GPS:', errorMessage, error);
             updateSyncStatus('error', `GPS: ${errorMessage}`);
+            hideLoading();
             
             // Alert mais informativo
-            alert(`🚫 Erro no GPS\n\n${errorMessage}\n\n${errorDetails}\n\nCódigo: ${error.code}`);
+            alert(`🚫 Erro no GPS\n\n${errorMessage}\n\n${errorDetails}`);
             
             if (isDriverTracking) {
                 stopDriverTracking();
@@ -900,6 +1004,7 @@
             isDriverTracking = false;
             syncCounter = 0;
             lastPosition = null;
+            hidePermissionGuide();
             
             // Atualizar interface
             document.getElementById('tracking-btn').textContent = '📍 Iniciar Rastreamento';
@@ -974,7 +1079,7 @@
         }
 
         // =============================================
-        // INICIALIZAÇÃO MOBILE (ATUALIZADA)
+        // INICIALIZAÇÃO MOBILE
         // =============================================
 
         function initMap() {
@@ -1103,15 +1208,6 @@
             console.log('📡 Conexão perdida');
             updateConnectionStatus(false);
             updateSyncStatus('error', 'Sem conexão com a internet');
-        });
-
-        // Prevenir saída acidental
-        window.addEventListener('beforeunload', function(e) {
-            if (isDriverTracking) {
-                e.preventDefault();
-                e.returnValue = 'O rastreamento está ativo. Tem certeza que deseja sair?';
-                return 'O rastreamento está ativo. Tem certeza que deseja sair?';
-            }
         });
     </script>
 </body>
