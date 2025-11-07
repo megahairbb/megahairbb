@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chamar Táxi - GoTáxi</title>
+    <title>Chamar Táxi - LisboaGo</title>
     <script src="https://js.stripe.com/v3/"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
         }
         
         body {
@@ -63,14 +62,11 @@
         
         input, select, textarea {
             width: 100%;
-            padding: 16px 15px;
+            padding: 12px 15px;
             border: 2px solid #e1e1e1;
             border-radius: 8px;
             font-size: 16px;
             transition: border-color 0.3s;
-            font-size: 16px !important;
-            min-height: 52px;
-            touch-action: manipulation;
         }
         
         input:focus, select:focus, textarea:focus {
@@ -100,7 +96,7 @@
         }
         
         .btn {
-            padding: 16px 30px;
+            padding: 15px 30px;
             border: none;
             border-radius: 8px;
             font-size: 16px;
@@ -109,7 +105,6 @@
             transition: all 0.3s;
             width: 100%;
             margin-top: 10px;
-            min-height: 54px;
         }
         
         .btn-primary {
@@ -136,6 +131,15 @@
             background: #ccc;
             cursor: not-allowed;
             transform: none;
+        }
+        
+        .driver-info {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            border-left: 4px solid #25D366;
         }
 
         /* Informações da rota */
@@ -170,6 +174,14 @@
             color: #1976d2;
         }
         
+        .route-price {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #0F9D58;
+            margin-top: 5px;
+        }
+        
         /* Modal de Pagamento */
         .modal {
             display: none;
@@ -182,7 +194,6 @@
             z-index: 1000;
             justify-content: center;
             align-items: center;
-            padding: 20px;
         }
         
         .modal-content {
@@ -202,15 +213,12 @@
         
         /* Stripe Elements Styles */
         .StripeElement {
-            padding: 16px 15px;
+            padding: 12px 15px;
             border: 2px solid #e1e1e1;
             border-radius: 8px;
             margin-bottom: 20px;
             background: white;
             transition: border-color 0.3s;
-            min-height: 52px;
-            display: flex;
-            align-items: center;
         }
         
         .StripeElement--focus {
@@ -276,27 +284,13 @@
             body {
                 padding: 10px;
             }
-            
-            .form-container {
-                padding: 20px;
-            }
-            
-            input, select, textarea {
-                padding: 18px 15px;
-                min-height: 56px;
-            }
-            
-            .btn {
-                padding: 18px 30px;
-                min-height: 58px;
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>GoTáxi</h1>
+            <h1>LisboaGo</h1>
             <p>Chame seu táxi em Lisboa</p>
         </div>
         
@@ -314,6 +308,7 @@
                             <div class="route-value" id="route-distance">-- km</div>
                         </div>
                     </div>
+                    <div class="route-price" id="route-price">-- €</div>
                 </div>
                 
                 <div class="form-group">
@@ -349,6 +344,24 @@
                 </div>
                 
                 <div class="form-group">
+                    <label>Tempo de Chegada</label>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="tempo" value="5" required style="width: auto; margin-right: 5px;">
+                            5 min
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="tempo" value="10" style="width: auto; margin-right: 5px;">
+                            10 min
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="tempo" value="15" style="width: auto; margin-right: 5px;">
+                            15 min
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
                     <label for="pagamento">Forma de Pagamento</label>
                     <select id="pagamento" name="pagamento" required>
                         <option value="cartao">Cartão de Crédito/Débito</option>
@@ -372,13 +385,18 @@
                     Confirmar Chamada - €0,50
                 </button>
                 
-                <div class="success-message" id="success-message">
-                    ✅ Pagamento confirmado! Agora você pode enviar a solicitação via WhatsApp.
+                <div class="driver-info">
+                    <strong>Motorista Disponível</strong><br>
+                    <span style="font-size: 18px; color: #0F9D58;">351 939 354 112</span>
                 </div>
                 
                 <button type="button" class="btn btn-success" id="enviar-whatsapp" disabled>
                     📱 Enviar Via WhatsApp
                 </button>
+                
+                <div class="success-message" id="success-message">
+                    ✅ Pagamento confirmado! Agora você pode enviar a solicitação via WhatsApp.
+                </div>
             </form>
         </div>
     </div>
@@ -486,18 +504,20 @@
         const routeInfo = document.getElementById('route-info');
         const routeTime = document.getElementById('route-time');
         const routeDistance = document.getElementById('route-distance');
+        const routePrice = document.getElementById('route-price');
         
         // Carregar dados salvos do localStorage
         function loadSavedRouteData() {
             try {
                 // Carregar dados da rota calculada
-                const routeData = localStorage.getItem('gotaxi_route_data');
+                const routeData = localStorage.getItem('lisboago_route_data');
                 if (routeData) {
                     const data = JSON.parse(routeData);
                     
                     // Atualizar informações da rota
                     routeTime.textContent = data.duration || '-- min';
                     routeDistance.textContent = data.distance || '-- km';
+                    routePrice.textContent = (data.price || '--') + ' €';
                     
                     // Mostrar seção de informações da rota
                     routeInfo.style.display = 'block';
@@ -506,7 +526,7 @@
                 }
                 
                 // Carregar endereços salvos
-                const currentData = localStorage.getItem('gotaxi_current_ride');
+                const currentData = localStorage.getItem('lisboago_current_ride');
                 if (currentData) {
                     const data = JSON.parse(currentData);
                     document.getElementById('origem').value = data.origin || '';
@@ -520,6 +540,35 @@
                 
             } catch (error) {
                 console.error('❌ Erro ao carregar dados salvos:', error);
+            }
+        }
+        
+        // Calcular preço da corrida baseado na distância
+        function calculateRidePrice(distanceText) {
+            try {
+                // Extrair número da distância (ex: "5.2 km" -> 5.2)
+                const distanceMatch = distanceText.match(/(\d+\.?\d*)/);
+                if (!distanceMatch) return '--';
+                
+                const distance = parseFloat(distanceMatch[1]);
+                
+                // Tarifas da LisboaGo
+                const baseRate = 2.50; // Taxa base
+                const perKmRate = 1.50; // Por km
+                const minRate = 5.00; // Valor mínimo
+                
+                // Calcular preço
+                let price = baseRate + (distance * perKmRate);
+                
+                // Garantir valor mínimo
+                if (price < minRate) {
+                    price = minRate;
+                }
+                
+                return price.toFixed(2);
+            } catch (error) {
+                console.error('❌ Erro ao calcular preço:', error);
+                return '--';
             }
         }
         
@@ -538,15 +587,6 @@
             const autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, {
                 types: ['geocode'],
                 componentRestrictions: { country: 'pt' }
-            });
-            
-            // Adicionar evento de clique direto para melhor sensibilidade
-            origemInput.addEventListener('click', function() {
-                this.focus();
-            });
-            
-            destinoInput.addEventListener('click', function() {
-                this.focus();
             });
             
             // Quando origem é selecionada, salvar no localStorage
@@ -582,7 +622,7 @@
                     timestamp: Date.now()
                 };
                 
-                localStorage.setItem('gotaxi_current_ride', JSON.stringify(currentData));
+                localStorage.setItem('lisboago_current_ride', JSON.stringify(currentData));
                 console.log('💾 Dados da corrida salvos:', currentData);
             }
         }
@@ -651,7 +691,7 @@
                     submitBtn.textContent = 'Pagar €0,50';
                     
                     // Salvar confirmação do pagamento
-                    localStorage.setItem('gotaxi_payment_confirmed', 'true');
+                    localStorage.setItem('lisboago_payment_confirmed', 'true');
                     
                 }, 2000);
                 
@@ -671,6 +711,7 @@
                 destino: document.getElementById('destino').value,
                 passageiros: document.getElementById('passageiros').value,
                 contato: document.getElementById('contato').value,
+                tempo: document.querySelector('input[name="tempo"]:checked').value,
                 pagamento: document.getElementById('pagamento').value,
                 observacao: document.getElementById('observacao').value
             };
@@ -678,19 +719,22 @@
             // Obter informações da rota
             const routeTimeText = routeTime.textContent;
             const routeDistanceText = routeDistance.textContent;
+            const routePriceText = routePrice.textContent;
             
-            const message = `🚕 *NOVA SOLICITAÇÃO DE TÁXI - GoTáxi* 🚕
+            const message = `🚕 *NOVA SOLICITAÇÃO DE TÁXI - LisboaGo* 🚕
             
 *Nome:* ${formData.nome}
 *Contato:* ${formData.contato}
 *Origem:* ${formData.origem}
 *Destino:* ${formData.destino}
 *Passageiros:* ${formData.passageiros}
+*Tempo de Chegada:* ${formData.tempo} min
 *Pagamento:* ${formData.pagamento}
 
 📊 *Informações da Corrida:*
 ⏱️ Tempo estimado: ${routeTimeText}
 📏 Distância: ${routeDistanceText}
+💰 Valor estimado: ${routePriceText}
 
 ${formData.observacao ? `*Observações:* ${formData.observacao}` : ''}
 
@@ -718,8 +762,14 @@ ${formData.observacao ? `*Observações:* ${formData.observacao}` : ''}
             initializeStripeElements();
             loadSavedRouteData();
             
-            // Limpar confirmação de pagamento anterior ao carregar a página
-            localStorage.removeItem('gotaxi_payment_confirmed');
+            // Verificar se já houve pagamento confirmado anteriormente
+            const paymentConfirmed = localStorage.getItem('lisboago_payment_confirmed');
+            if (paymentConfirmed === 'true') {
+                successMessage.style.display = 'block';
+                confirmarBtn.disabled = true;
+                confirmarBtn.textContent = '✅ Pagamento Confirmado';
+                whatsappBtn.disabled = false;
+            }
         };
     </script>
 </body>
