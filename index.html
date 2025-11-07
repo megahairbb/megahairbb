@@ -1,65 +1,54 @@
+index.html
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GoTáxi - Seu Táxi em Lisboa</title>
-    
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LisboaGo - Seu Táxi em Lisboa</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-text-size-adjust: 100%;
         }
         
         body, html {
             height: 100%;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f5f5f5;
-            touch-action: manipulation;
-            overflow: hidden;
         }
         
         #map {
             height: 100vh;
             width: 100vw;
-            position: fixed;
-            top: 0;
-            left: 0;
         }
         
-        /* Cabeçalho Mobile */
+        /* Cabeçalho */
         header {
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
             right: 0;
             background: #000;
             color: white;
-            padding: 12px 15px;
+            padding: 15px 20px;
             z-index: 1000;
             display: flex;
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            height: 60px;
         }
         
         .logo h1 {
-            font-size: 18px;
+            font-size: 24px;
             font-weight: 700;
             color: #FFD700;
-            margin-bottom: 1px;
+            margin-bottom: 2px;
         }
         
         .logo p {
-            font-size: 10px;
+            font-size: 12px;
             color: #fff;
             opacity: 0.8;
         }
@@ -68,75 +57,68 @@
             background: #FFD700;
             color: #000;
             border: none;
-            padding: 10px 16px;
-            border-radius: 20px;
+            padding: 10px 20px;
+            border-radius: 5px;
             font-weight: 600;
             cursor: pointer;
-            font-size: 12px;
-            white-space: nowrap;
-            min-height: 40px;
-            touch-action: manipulation;
+            transition: all 0.3s ease;
         }
         
-        /* Painel de pesquisa Mobile */
+        .driver-area-btn:hover {
+            background: #FFC400;
+            transform: translateY(-2px);
+        }
+        
+        /* Painel de pesquisa */
         .search-panel {
-            position: fixed;
-            top: 70px;
-            left: 10px;
-            right: 10px;
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 1000;
-            background: rgba(255, 255, 255, 0.98);
-            padding: 12px;
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            width: 90%;
+            max-width: 500px;
         }
         
         .search-input {
             width: 100%;
-            padding: 16px 15px;
+            padding: 12px 15px;
             border: 1px solid #ddd;
-            border-radius: 10px;
-            font-size: 16px;
-            margin-bottom: 8px;
+            border-radius: 6px;
+            font-size: 15px;
+            margin-bottom: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            -webkit-appearance: none;
-            min-height: 52px;
-            line-height: 20px;
-            touch-action: manipulation;
-            cursor: pointer;
         }
         
-        /* Melhorias para campos de entrada em mobile */
-        input, textarea, select {
-            font-size: 16px !important;
-            touch-action: manipulation;
-        }
-        
-        /* Informações da rota Mobile */
+        /* Informações da rota */
         .route-info {
-            position: fixed;
-            top: 180px;
-            left: 10px;
-            right: 10px;
+            position: absolute;
+            top: 200px;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 1000;
-            background: rgba(255, 255, 255, 0.98);
+            background: rgba(255, 255, 255, 0.95);
             padding: 15px;
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            width: 90%;
+            max-width: 500px;
             display: none;
-            backdrop-filter: blur(10px);
         }
         
         .route-details {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
+            margin-bottom: 10px;
         }
         
         .route-item {
             text-align: center;
-            padding: 8px;
         }
         
         .route-label {
@@ -151,38 +133,47 @@
             color: #1976d2;
         }
         
-        /* Botão Chame GoTáxi Mobile */
+        .route-price {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #0F9D58;
+            margin-top: 5px;
+        }
+        
+        /* Botão Chame LisboaGo */
         .call-taxi-section {
-            position: fixed;
-            bottom: 20px;
-            left: 10px;
-            right: 10px;
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 1000;
+            width: 90%;
+            max-width: 500px;
             text-align: center;
         }
         
         .btn-call-taxi {
             background: #FFD700;
             color: #000;
-            padding: 18px 25px;
+            padding: 16px 25px;
             border: none;
-            border-radius: 25px;
+            border-radius: 10px;
             font-weight: 700;
             cursor: pointer;
             width: 100%;
-            font-size: 18px;
-            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
-            transition: all 0.2s ease;
-            min-height: 60px;
-            touch-action: manipulation;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
         }
         
-        .btn-call-taxi:active {
-            transform: scale(0.98);
+        .btn-call-taxi:hover {
             background: #FFC400;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
         }
         
-        /* Modal de login Mobile */
+        /* Modal de login */
         .modal {
             display: none;
             position: fixed;
@@ -190,27 +181,25 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.7);
             z-index: 2000;
             justify-content: center;
             align-items: center;
-            padding: 20px;
         }
         
         .modal-content {
             background: white;
-            padding: 25px;
-            border-radius: 20px;
-            width: 100%;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
             max-width: 400px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
         
         .modal h2 {
             text-align: center;
             margin-bottom: 20px;
             color: #333;
-            font-size: 22px;
         }
         
         .form-group {
@@ -222,37 +211,31 @@
             margin-bottom: 5px;
             font-weight: 600;
             color: #555;
-            font-size: 14px;
         }
         
         .form-group input {
             width: 100%;
-            padding: 16px;
+            padding: 12px;
             border: 1px solid #ddd;
-            border-radius: 10px;
-            font-size: 16px;
-            -webkit-appearance: none;
-            min-height: 52px;
-            touch-action: manipulation;
-            cursor: pointer;
+            border-radius: 5px;
+            font-size: 15px;
         }
         
         .login-btn {
             width: 100%;
-            padding: 16px;
+            padding: 12px;
             background: #000;
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 5px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             margin-top: 10px;
-            min-height: 54px;
-            touch-action: manipulation;
+            transition: background 0.3s;
         }
         
-        .login-btn:active {
+        .login-btn:hover {
             background: #333;
         }
         
@@ -264,34 +247,52 @@
             display: none;
         }
         
-        /* Loading Spinner */
-        .loading {
+        /* Debug panel */
+        .debug-panel {
+            position: absolute;
+            top: 150px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-family: monospace;
+            max-width: 300px;
             display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 3000;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
         }
         
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #FFD700;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        @media (max-width: 768px) {
+            .search-panel {
+                top: 70px;
+                padding: 12px;
+            }
+            
+            .route-info {
+                top: 180px;
+            }
+            
+            .call-taxi-section {
+                bottom: 20px;
+            }
+            
+            .btn-call-taxi {
+                padding: 14px 20px;
+                font-size: 15px;
+            }
+            
+            .logo h1 {
+                font-size: 20px;
+            }
+            
+            .logo p {
+                font-size: 10px;
+            }
+            
+            .debug-panel {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -299,10 +300,10 @@
     <!-- Cabeçalho -->
     <header>
         <div class="logo">
-            <h1>GoTáxi</h1>
-            <p>Seu Táxi Em Lisboa</p>
+            <h1>LisboaGo</h1>
+            <p>Seu Táxi Em Lisboa, Quando Precisar!</p>
         </div>
-        <button class="driver-area-btn" id="driver-area-btn">Motorista</button>
+        <button class="driver-area-btn" id="driver-area-btn">Área do Motorista</button>
     </header>
     
     <!-- Mapa -->
@@ -310,35 +311,30 @@
     
     <!-- Painel de pesquisa -->
     <div class="search-panel">
-        <input type="text" id="search-box" class="search-input" placeholder="📍 Onde você está?" autocomplete="off">
-        <input type="text" id="destination-box" class="search-input" placeholder="🎯 Pra onde vai?" autocomplete="off">
+        <input type="text" id="search-box" class="search-input" placeholder="Onde você está?">
+        <input type="text" id="destination-box" class="search-input" placeholder="Pra onde vai?">
     </div>
 
     <!-- Informações da rota -->
     <div class="route-info" id="route-info">
         <div class="route-details">
             <div class="route-item">
-                <div class="route-label">Tempo</div>
+                <div class="route-label">Tempo da Corrida</div>
                 <div class="route-value" id="route-time">-- min</div>
             </div>
             <div class="route-item">
-                <div class="route-label">Distância</div>
+                <div class="route-label">Distância Total</div>
                 <div class="route-value" id="route-distance">-- km</div>
             </div>
         </div>
+        <div class="route-price" id="route-price">-- €</div>
     </div>
     
-    <!-- Botão Chame GoTáxi -->
+    <!-- Botão Chame LisboaGo -->
     <div class="call-taxi-section">
         <button class="btn-call-taxi" id="call-taxi-btn">
-            🚕 Chamar GoTáxi - €0,50
+            🚕 Chame LisboaGo
         </button>
-    </div>
-    
-    <!-- Loading -->
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <div>Calculando rota...</div>
     </div>
     
     <!-- Modal de login -->
@@ -347,40 +343,36 @@
             <h2>Área do Motorista</h2>
             <div class="form-group">
                 <label for="username">Usuário</label>
-                <input type="text" id="username" placeholder="Digite seu usuário" autocomplete="off">
+                <input type="text" id="username" placeholder="Digite seu usuário">
             </div>
             <div class="form-group">
                 <label for="password">Senha</label>
-                <input type="password" id="password" placeholder="Digite sua senha" autocomplete="off">
+                <input type="password" id="password" placeholder="Digite sua senha">
             </div>
             <button class="login-btn" id="login-btn">Entrar</button>
             <div class="error-message" id="error-message">Usuário ou senha incorretos!</div>
         </div>
     </div>
 
+    <!-- Debug Panel -->
+    <div class="debug-panel" id="debug-panel">
+        <strong>Debug Info:</strong><br>
+        Status: <span id="debug-status">Carregando...</span><br>
+        Motorista: <span id="debug-driver">--</span><br>
+        Posição: <span id="debug-position">--</span><br>
+        Atualizado: <span id="debug-updated">--</span>
+    </div>
+
     <script>
         // =============================================
-        // CONFIGURAÇÃO FIREBASE
+        // SISTEMA GLOBAL DE RASTREAMENTO - CORRIGIDO
         // =============================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyB2ljIwjmbPF1vfCgth4bLd3d7hhLdxKIk",
-            authDomain: "lisboago-app.firebaseapp.com",
-            projectId: "lisboago-app",
-            storageBucket: "lisboago-app.firebasestorage.app",
-            messagingSenderId: "467502556237",
-            appId: "1:467502556237:web:ff0074a42a664f7efba804"
-        };
-
-        // Inicializar Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        // =============================================
-        // VARIÁVEIS GLOBAIS
-        // =============================================
+        
+        // Variáveis globais
         let map;
-        let driverMarkers = {};
-        let lastDriverPositions = {};
+        let driverMarker = null;
+        let lastDriverPosition = null;
+        let positionUpdateInterval = null;
         let directionsService = null;
         let directionsRenderer = null;
         let driverToClientRenderer = null;
@@ -388,203 +380,196 @@
         let destinationMarker = null;
         let currentRoute = null;
         let clientPosition = null;
-        let firebaseListener = null;
-        let isCalculatingRoute = false;
-        let activeDrivers = {};
+        let driverDataCheckCount = 0;
+        let lastDriverDataString = '';
+        let driverAnimation = null;
+        let debugEnabled = true;
 
         // =============================================
-        // FUNÇÕES MOBILE
+        // SISTEMA DE SINCRONIZAÇÃO ROBUSTO
         // =============================================
+        
+        function setupRealTimeTracking() {
+            console.log('🚕 INICIANDO SISTEMA GLOBAL DE RASTREAMENTO...');
+            
+            // Mostrar painel de debug
+            if (debugEnabled) {
+                document.getElementById('debug-panel').style.display = 'block';
+            }
+            
+            // Limpar intervalos anteriores se existirem
+            if (positionUpdateInterval) {
+                clearInterval(positionUpdateInterval);
+            }
+            
+            // Verificar status inicial IMEDIATAMENTE
+            checkDriverStatus();
+            
+            // Sistema de polling mais agressivo
+            positionUpdateInterval = setInterval(checkDriverStatus, 800);
+            
+            // Sistema de polling adicional para localStorage
+            setupStoragePolling();
+            
+            // Event listener para mudanças no localStorage
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'lisboago_driver_data') {
+                    console.log('📡 EVENTO STORAGE DETECTADO - Atualizando posição do motorista');
+                    updateDebugInfo('storage', 'Evento storage detectado');
+                    checkDriverStatus();
+                }
+            });
+            
+            // Verificar quando a página ganha foco
+            window.addEventListener('focus', function() {
+                console.log('🔄 Página em foco - verificando motorista');
+                updateDebugInfo('focus', 'Página em foco');
+                checkDriverStatus();
+            });
 
-        function showLoading() {
-            document.getElementById('loading').style.display = 'block';
+            // Verificar também quando a visibilidade da página muda
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    console.log('👀 Página visível - verificando motorista');
+                    updateDebugInfo('visibility', 'Página visível');
+                    checkDriverStatus();
+                }
+            });
+
+            console.log('✅ Sistema global de rastreamento inicializado');
+            updateDebugInfo('system', 'Sistema iniciado');
         }
 
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
+        // SISTEMA DE POLLING ROBUSTO
+        function setupStoragePolling() {
+            console.log('🔍 Iniciando polling robusto (500ms)');
+            
+            setInterval(() => {
+                const currentDriverData = localStorage.getItem('lisboago_driver_data');
+                
+                if (currentDriverData !== lastDriverDataString) {
+                    lastDriverDataString = currentDriverData;
+                    if (currentDriverData) {
+                        console.log('🔄 Polling detectou mudança nos dados');
+                        updateDebugInfo('polling', 'Dados alterados');
+                        checkDriverStatus();
+                    }
+                }
+            }, 500);
         }
 
-        function vibrate() {
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
+        // ATUALIZAR INFORMAÇÕES DE DEBUG
+        function updateDebugInfo(type, message) {
+            if (!debugEnabled) return;
+            
+            const debugStatus = document.getElementById('debug-status');
+            const debugDriver = document.getElementById('debug-driver');
+            const debugPosition = document.getElementById('debug-position');
+            const debugUpdated = document.getElementById('debug-updated');
+            
+            if (debugStatus) debugStatus.textContent = message;
+            
+            const driverData = getDriverData();
+            if (driverData) {
+                if (debugDriver) debugDriver.textContent = driverData.isTracking ? 'ATIVO' : 'INATIVO';
+                if (driverData.position && debugPosition) {
+                    debugPosition.textContent = `${driverData.position.lat.toFixed(4)}, ${driverData.position.lng.toFixed(4)}`;
+                }
+                if (debugUpdated) {
+                    const age = Math.round((Date.now() - driverData.timestamp)/1000);
+                    debugUpdated.textContent = `${age}s atrás`;
+                }
             }
         }
 
-        // =============================================
-        // SISTEMA FIREBASE - MULTIPLOS MOTORISTAS
-        // =============================================
-
-        function setupFirebaseListener() {
-            console.log('👂 INICIANDO ESCUTA FIREBASE PARA MÚLTIPLOS MOTORISTAS...');
+        // VERIFICAÇÃO DO STATUS DO MOTORISTA - CORRIGIDA
+        function checkDriverStatus() {
+            driverDataCheckCount++;
+            const driverData = getDriverData();
             
-            try {
-                // ESCUTAR TODOS OS MOTORISTAS ATIVOS
-                firebaseListener = db.collection('drivers')
-                    .onSnapshot(function(snapshot) {
-                        console.log(`📡 Firebase: ${snapshot.size} motoristas na coleção`);
-                        
-                        snapshot.docChanges().forEach(function(change) {
-                            const driverId = change.doc.id;
-                            const driverData = change.doc.data();
-                            
-                            console.log(`🔄 Mudança detectada: ${change.type} para ${driverId}`, driverData);
-
-                            if (change.type === 'added' || change.type === 'modified') {
-                                // VERIFICAR SE O MOTORISTA ESTÁ ATIVO
-                                if (driverData.isTracking && driverData.position) {
-                                    const newPosition = driverData.position;
-                                    const driverName = driverData.driverName || driverId;
-                                    
-                                    console.log(`🚕 MOTORISTA ATIVO: ${driverName} (${driverId})`, newPosition);
-                                    
-                                    // Atualizar lista de motoristas ativos
-                                    activeDrivers[driverId] = {
-                                        name: driverName,
-                                        position: newPosition,
-                                        lastUpdate: driverData.timestamp || Date.now(),
-                                        isActive: true
-                                    };
-                                    
-                                    const positionChanged = !lastDriverPositions[driverId] || 
-                                        getDistance(lastDriverPositions[driverId], newPosition) > 0.001; // 1 metro
-                                    
-                                    if (positionChanged) {
-                                        console.log(`📍 ATUALIZANDO POSIÇÃO: ${driverName}`, newPosition);
-                                        
-                                        updateDriverMarker(driverId, driverName, newPosition);
-                                        lastDriverPositions[driverId] = newPosition;
-                                    }
-                                    
-                                } else {
-                                    // Motorista não está mais ativo
-                                    console.log(`🚫 MOTORISTA INATIVO: ${driverId}`);
-                                    activeDrivers[driverId] = {
-                                        ...activeDrivers[driverId],
-                                        isActive: false
-                                    };
-                                    removeDriverMarker(driverId);
-                                    delete lastDriverPositions[driverId];
-                                }
-                            } else if (change.type === 'removed') {
-                                console.log(`🗑️ MOTORISTA REMOVIDO: ${driverId}`);
-                                removeDriverMarker(driverId);
-                                delete activeDrivers[driverId];
-                                delete lastDriverPositions[driverId];
-                            }
-                        });
-
-                    }, function(error) {
-                        console.error('❌ ERRO NA ESCUTA FIREBASE:', error);
-                        // Tentar reconectar após 5 segundos
-                        setTimeout(setupFirebaseListener, 5000);
+            if (driverData && driverData.isTracking && driverData.position) {
+                const newPosition = driverData.position;
+                
+                // Verificar se a posição mudou significativamente
+                const positionChanged = !lastDriverPosition || 
+                    getDistance(lastDriverPosition, newPosition) > 5; // Só atualizar se mudou mais de 5 metros
+                
+                if (positionChanged) {
+                    console.log(`📍 [${driverDataCheckCount}] POSIÇÃO ATUALIZADA:`, {
+                        lat: newPosition.lat.toFixed(6),
+                        lng: newPosition.lng.toFixed(6),
+                        distance: lastDriverPosition ? getDistance(lastDriverPosition, newPosition).toFixed(1) + 'm' : 'N/A',
+                        age: Math.round((Date.now() - driverData.timestamp)/1000) + 's'
                     });
                     
-            } catch (error) {
-                console.error('❌ ERRO AO CONFIGURAR FIREBASE:', error);
+                    updateDebugInfo('position', `Posição atualizada #${driverDataCheckCount}`);
+                    
+                    // ATUALIZAR MARCADOR DO MOTORISTA
+                    updateDriverMarker(newPosition);
+                    
+                    // CALCULAR ROTA ENTRE MOTORISTA E CLIENTE
+                    if (clientPosition) {
+                        calculateDriverToClientRoute(newPosition, clientPosition);
+                    }
+                    
+                    lastDriverPosition = newPosition;
+                }
+                
+            } else {
+                // Motorista não está ativo
+                if (!driverData) {
+                    if (driverDataCheckCount > 2) { // Aguardar 2 verificações
+                        removeDriverMarker();
+                        removeDriverToClientRoute();
+                        updateDebugInfo('error', 'Motorista não encontrado');
+                        console.log(`❌ [${driverDataCheckCount}] Motorista não encontrado após ${driverDataCheckCount} verificações`);
+                    }
+                } else if (driverData.isTracking === false) {
+                    removeDriverMarker();
+                    removeDriverToClientRoute();
+                    updateDebugInfo('status', 'Motorista parou');
+                    console.log(`❌ Motorista parou o rastreamento`);
+                }
             }
         }
 
-        function stopFirebaseListener() {
-            if (firebaseListener) {
-                firebaseListener();
-                firebaseListener = null;
-                console.log('🔇 Escuta Firebase parada');
-            }
-        }
-
-        // =============================================
-        // FUNÇÕES DO MAPA - MULTIPLOS MOTORISTAS
-        // =============================================
-
-        function updateDriverMarker(driverId, driverName, newPosition) {
+        // ATUALIZAR MARCADOR DO MOTORISTA - VERSÃO SIMPLIFICADA
+        function updateDriverMarker(newPosition) {
             if (!map) {
                 console.log('❌ Mapa não disponível para atualizar marcador');
                 return;
             }
             
-            console.log(`🗺️ Atualizando marcador no mapa: ${driverName}`, newPosition);
-            
             const newLatLng = new google.maps.LatLng(newPosition.lat, newPosition.lng);
             
-            if (driverMarkers[driverId]) {
-                // Atualizar marcador existente com animação
-                const oldPosition = driverMarkers[driverId].getPosition();
-                driverMarkers[driverId].setPosition(newLatLng);
-                driverMarkers[driverId].setTitle(`${driverName} - Online`);
-                driverMarkers[driverId].setZIndex(1000);
-                
-                console.log(`📍 Marcador atualizado: ${driverName}`);
-                
+            if (driverMarker) {
+                // Atualização direta - sem animação complexa
+                driverMarker.setPosition(newLatLng);
+                console.log('🔄 Marcador atualizado para nova posição');
             } else {
                 // Criar novo marcador
-                driverMarkers[driverId] = new google.maps.Marker({
+                driverMarker = new google.maps.Marker({
                     map: map,
                     position: newLatLng,
-                    title: `${driverName} - Online`,
-                    icon: getTaxiIcon(driverId),
-                    optimized: false, // Desativar otimização para melhor controle
-                    zIndex: 1000
+                    title: 'Motorista LisboaGo - Em movimento',
+                    icon: getTaxiIcon(),
+                    optimized: true
                 });
                 
-                // Adicionar evento de clique para informações
-                driverMarkers[driverId].addListener('click', function() {
-                    const infoWindow = new google.maps.InfoWindow({
-                        content: `
-                            <div style="padding: 10px;">
-                                <h3 style="margin: 0 0 5px 0; color: #000;">🚕 ${driverName}</h3>
-                                <p style="margin: 0; color: #666;">Status: <strong style="color: #0F9D58;">Disponível</strong></p>
-                                <p style="margin: 5px 0 0 0; font-size: 12px; color: #888;">
-                                    Lat: ${newPosition.lat.toFixed(6)}<br>
-                                    Lng: ${newPosition.lng.toFixed(6)}
-                                </p>
-                            </div>
-                        `
-                    });
-                    infoWindow.open(map, driverMarkers[driverId]);
-                });
-                
-                console.log(`🆕 Novo marcador criado: ${driverName}`);
+                console.log('🆕 Novo marcador criado:', newPosition);
+                updateDebugInfo('marker', 'Novo marcador criado');
             }
             
-            // Centralizar no primeiro motorista ativo
-            if (Object.keys(driverMarkers).length === 1) {
-                map.panTo(newLatLng);
+            // GARANTIR que o marcador está visível
+            if (driverMarker.getMap() === null) {
+                driverMarker.setMap(map);
+                console.log('🔧 Marcador reativado no mapa');
             }
         }
 
-        function removeDriverMarker(driverId) {
-            if (driverMarkers[driverId]) {
-                driverMarkers[driverId].setMap(null);
-                delete driverMarkers[driverId];
-                console.log(`🗑️ Marcador removido: ${driverId}`);
-            }
-        }
-
-        function getTaxiIcon(driverId) {
-            const colors = {
-                'motorista_mega': '#FFD700',
-                'motorista_heitor': '#FF6B6B',
-                'motorista_joao': '#4ECDC4',
-                'motorista_maria': '#FFA5A5'
-            };
-            
-            const color = colors[driverId] || '#FFD700';
-            
-            return {
-                url: `data:image/svg+xml;base64,${btoa(`
-                    <svg width="50" height="50" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="25" cy="25" r="22" fill="${color}" stroke="#000" stroke-width="2"/>
-                        <text x="25" y="32" text-anchor="middle" fill="#000" font-weight="bold" font-size="16">🚕</text>
-                        <circle cx="38" cy="12" r="6" fill="#0F9D58" stroke="#fff" stroke-width="1.5"/>
-                    </svg>
-                `)}`,
-                scaledSize: new google.maps.Size(50, 50),
-                anchor: new google.maps.Point(25, 25)
-            };
-        }
-
+        // CALCULAR DISTÂNCIA ENTRE DOIS PONTOS (metros)
         function getDistance(pos1, pos2) {
-            const R = 6371000;
+            const R = 6371000; // Raio da Terra em metros
             const dLat = (pos2.lat - pos1.lat) * Math.PI / 180;
             const dLng = (pos2.lng - pos1.lng) * Math.PI / 180;
             const a = 
@@ -595,15 +580,156 @@
             return R * c;
         }
 
+        // CALCULAR ROTA CINZA ENTRE MOTORISTA E CLIENTE
+        function calculateDriverToClientRoute(driverPos, clientPos) {
+            if (!directionsService) return;
+            
+            const request = {
+                origin: driverPos,
+                destination: clientPos,
+                travelMode: google.maps.TravelMode.DRIVING
+            };
+            
+            directionsService.route(request, function(result, status) {
+                if (status == google.maps.DirectionsStatus.OK) {
+                    // Renderizar rota cinza
+                    if (!driverToClientRenderer) {
+                        driverToClientRenderer = new google.maps.DirectionsRenderer({
+                            map: map,
+                            suppressMarkers: true,
+                            preserveViewport: false,
+                            polylineOptions: {
+                                strokeColor: '#666',
+                                strokeOpacity: 0.8,
+                                strokeWeight: 4,
+                                zIndex: 1
+                            }
+                        });
+                    }
+                    
+                    driverToClientRenderer.setDirections(result);
+                    console.log('🛣️ Rota motorista-cliente atualizada');
+                    
+                } else {
+                    console.error('❌ Erro ao calcular rota motorista-cliente:', status);
+                }
+            });
+        }
+
+        // REMOVER ROTA MOTORISTA-CLIENTE
+        function removeDriverToClientRoute() {
+            if (driverToClientRenderer) {
+                driverToClientRenderer.setMap(null);
+                driverToClientRenderer = null;
+                console.log('🗑️ Rota motorista-cliente removida');
+            }
+        }
+
+        // OBTER DADOS DO MOTORISTA - VERIFICAÇÃO ROBUSTA
+        function getDriverData() {
+            try {
+                const data = localStorage.getItem('lisboago_driver_data');
+                if (data) {
+                    const driverData = JSON.parse(data);
+                    
+                    // VERIFICAÇÃO COMPLETA dos dados
+                    if (driverData.isTracking && 
+                        driverData.position && 
+                        typeof driverData.position.lat === 'number' &&
+                        typeof driverData.position.lng === 'number' &&
+                        driverData.timestamp) {
+                        
+                        // Verificar se os dados não estão muito antigos (menos de 2 minutos)
+                        const dataAge = Date.now() - driverData.timestamp;
+                        if (dataAge < 120000) { // 2 minutos
+                            return driverData;
+                        } else {
+                            console.log('⚠️ Dados do motorista expirados:', Math.round(dataAge/1000) + 's');
+                            return null;
+                        }
+                    } else {
+                        console.log('⚠️ Dados do motorista incompletos:', driverData);
+                        return null;
+                    }
+                }
+                return null;
+            } catch (error) {
+                console.error('❌ Erro ao ler dados do motorista:', error);
+                return null;
+            }
+        }
+
+        // REMOVER MARCADOR DO MOTORISTA
+        function removeDriverMarker() {
+            if (driverMarker) {
+                if (driverAnimation) {
+                    clearInterval(driverAnimation);
+                    driverAnimation = null;
+                }
+                driverMarker.setMap(null);
+                driverMarker = null;
+                console.log('🗑️ Marcador do motorista removido');
+                updateDebugInfo('marker', 'Marcador removido');
+            }
+        }
+
+        // OBTER ÍCONE DO TÁXI
+        function getTaxiIcon() {
+            return {
+                url: 'https://cdn-icons-png.flaticon.com/128/16062/16062688.png',
+                scaledSize: new google.maps.Size(50, 50),
+                anchor: new google.maps.Point(25, 25)
+            };
+        }
+
+        // OBTER ÍCONE DO CLIENTE (BONEQUINHO)
+        function getClientIcon() {
+            return {
+                url: 'https://cdn-icons-png.flaticon.com/128/16062/16062688.png',
+                scaledSize: new google.maps.Size(40, 40),
+                anchor: new google.maps.Point(20, 20)
+            };
+        }
+
         // =============================================
-        // SISTEMA DE ROTAS
+        // SISTEMA DE CÁLCULO DE PREÇOS
+        // =============================================
+
+        function isWeekendOrHoliday() {
+            const now = new Date();
+            const portugalTime = new Date(now.toLocaleString("en-US", {timeZone: "Europe/Lisbon"}));
+            const day = portugalTime.getDay();
+            return day === 0 || day === 6;
+        }
+
+        function calculatePrice(distanceInKm) {
+            const baseRateWeekday = 3.25;
+            const baseRateWeekend = 3.90;
+            const perKmRate = 0.90;
+            const minRate = 3.25;
+            
+            const isWeekend = isWeekendOrHoliday();
+            const baseRate = isWeekend ? baseRateWeekend : baseRateWeekday;
+            
+            let price = baseRate + (distanceInKm * perKmRate);
+            
+            if (price < minRate) {
+                price = minRate;
+            }
+            
+            return {
+                price: price.toFixed(2),
+                baseRate: baseRate,
+                isWeekend: isWeekend
+            };
+        }
+
+        // =============================================
+        // SISTEMA DE ROTAS E NAVEGAÇÃO
         // =============================================
 
         function calculateRoute(origin, destination) {
-            if (!directionsService || !directionsRenderer || isCalculatingRoute) return;
-            
-            isCalculatingRoute = true;
-            showLoading();
+            if (!directionsService || !directionsRenderer) return;
             
             const request = {
                 origin: origin,
@@ -612,9 +738,6 @@
             };
             
             directionsService.route(request, function(result, status) {
-                isCalculatingRoute = false;
-                hideLoading();
-                
                 if (status == google.maps.DirectionsStatus.OK) {
                     directionsRenderer.setDirections(result);
                     currentRoute = result;
@@ -622,19 +745,26 @@
                     const route = result.routes[0].legs[0];
                     const duration = route.duration.text;
                     const distance = route.distance.text;
+                    const distanceInKm = parseFloat(route.distance.text.replace(' km', '').replace(',', '.'));
+                    
+                    const priceInfo = calculatePrice(distanceInKm);
                     
                     document.getElementById('route-time').textContent = duration;
                     document.getElementById('route-distance').textContent = distance;
+                    document.getElementById('route-price').textContent = priceInfo.price + ' €';
                     document.getElementById('route-info').style.display = 'block';
                     
-                    // Salvar dados da rota
                     const routeData = {
+                        origin: origin,
+                        destination: destination,
                         duration: duration,
-                        distance: distance
+                        distance: distance,
+                        price: priceInfo.price,
+                        isWeekend: priceInfo.isWeekend,
+                        baseRate: priceInfo.baseRate,
+                        timestamp: Date.now()
                     };
-                    localStorage.setItem('gotaxi_route_data', JSON.stringify(routeData));
-                    
-                    vibrate();
+                    localStorage.setItem('lisboago_route_data', JSON.stringify(routeData));
                     
                 } else {
                     console.error('❌ Erro ao calcular rota:', status);
@@ -644,37 +774,24 @@
         }
 
         // =============================================
-        // INICIALIZAÇÃO DO MAPA
+        // INICIALIZAÇÃO DO MAPA PRINCIPAL
         // =============================================
 
         function initMap() {
-            console.log('🗺️ INICIALIZANDO MAPA MOBILE...');
-            
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            console.log('🗺️ Inicializando mapa principal...');
+            updateDebugInfo('map', 'Iniciando mapa...');
             
             const mapOptions = {
                 center: { lat: 38.7223, lng: -9.1393 },
-                zoom: isMobile ? 14 : 13,
+                zoom: 12,
                 mapTypeId: google.maps.MapTypeId.ROADMAP,
                 fullscreenControl: false,
                 streetViewControl: false,
-                mapTypeControl: false,
-                zoomControl: true,
-                zoomControlOptions: {
-                    position: google.maps.ControlPosition.RIGHT_BOTTOM
-                },
-                gestureHandling: 'greedy',
-                styles: [
-                    {
-                        "featureType": "poi",
-                        "stylers": [{"visibility": "off"}]
-                    }
-                ]
+                mapTypeControl: false
             };
             
             map = new google.maps.Map(document.getElementById('map'), mapOptions);
             
-            // Inicializar serviços de direções
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer({
                 map: map,
@@ -682,149 +799,97 @@
                 polylineOptions: {
                     strokeColor: '#1976d2',
                     strokeOpacity: 0.8,
-                    strokeWeight: 6
+                    strokeWeight: 5
                 }
             });
             
-            // Configurar elementos da interface
-            setupInterfaceElements();
-            
-            // Iniciar escuta do Firebase
-            setTimeout(() => {
-                setupFirebaseListener();
-            }, 2000);
-            
-            console.log('✅ MAPA INICIALIZADO COM SUCESSO - PRONTO PARA MOTORISTAS');
-        }
-
-        function setupInterfaceElements() {
+            // Elementos da interface
             const searchBox = document.getElementById('search-box');
             const destinationBox = document.getElementById('destination-box');
             const callTaxiBtn = document.getElementById('call-taxi-btn');
             const driverAreaBtn = document.getElementById('driver-area-btn');
             const loginModal = document.getElementById('login-modal');
             const loginBtn = document.getElementById('login-btn');
-            
-            // Configurar botão motorista
-            driverAreaBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                vibrate();
-                loginModal.style.display = 'flex';
-            });
-            
-            // Configurar autocomplete
-            initAutocomplete();
-            
-            // Configurar botão de chamar táxi
-            callTaxiBtn.addEventListener('click', function() {
-                vibrate();
-                if (!originMarker || !destinationMarker) {
-                    alert('Por favor, selecione origem e destino no mapa.');
-                    return;
-                }
-                
-                const currentData = {
-                    origin: searchBox.value,
-                    destination: destinationBox.value,
-                    timestamp: Date.now()
-                };
-                localStorage.setItem('gotaxi_current_ride', JSON.stringify(currentData));
-                
-                window.location.href = 'chamar-taxi.html';
-            });
-            
-            // Configurar login
-            setupLoginSystem();
-        }
-
-        function initAutocomplete() {
-            const searchBox = document.getElementById('search-box');
-            const destinationBox = document.getElementById('destination-box');
-            
-            let autocompleteOrigin = new google.maps.places.Autocomplete(searchBox, {
-                types: ['geocode'],
-                componentRestrictions: { country: 'pt' },
-                fields: ['geometry', 'name', 'formatted_address']
-            });
-            
-            let autocompleteDestination = new google.maps.places.Autocomplete(destinationBox, {
-                types: ['geocode'],
-                componentRestrictions: { country: 'pt' },
-                fields: ['geometry', 'name', 'formatted_address']
-            });
-            
-            autocompleteOrigin.addListener('place_changed', function() {
-                const place = autocompleteOrigin.getPlace();
-                if (!place.geometry) return;
-                
-                clientPosition = place.geometry.location;
-                
-                if (originMarker) originMarker.setMap(null);
-                
-                originMarker = new google.maps.Marker({
-                    map: map,
-                    position: place.geometry.location,
-                    title: 'Sua localização',
-                    icon: getClientIcon(),
-                    zIndex: 999
-                });
-                
-                map.panTo(place.geometry.location);
-                
-                if (destinationMarker) {
-                    calculateRoute(place.geometry.location, destinationMarker.getPosition());
-                }
-            });
-            
-            autocompleteDestination.addListener('place_changed', function() {
-                const place = autocompleteDestination.getPlace();
-                if (!place.geometry) return;
-                
-                if (destinationMarker) destinationMarker.setMap(null);
-                
-                destinationMarker = new google.maps.Marker({
-                    map: map,
-                    position: place.geometry.location,
-                    title: 'Destino',
-                    icon: {
-                        url: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-                        scaledSize: new google.maps.Size(30, 30),
-                        anchor: new google.maps.Point(15, 15)
-                    },
-                    zIndex: 998
-                });
-                
-                if (originMarker) {
-                    calculateRoute(originMarker.getPosition(), place.geometry.location);
-                }
-            });
-        }
-
-        function setupLoginSystem() {
-            const loginBtn = document.getElementById('login-btn');
-            const loginModal = document.getElementById('login-modal');
             const usernameInput = document.getElementById('username');
             const passwordInput = document.getElementById('password');
             const errorMessage = document.getElementById('error-message');
             
-            loginBtn.addEventListener('click', function() {
-                vibrate();
-                const username = usernameInput.value;
-                const password = passwordInput.value;
+            let autocompleteOrigin, autocompleteDestination;
+            let originPlace = null;
+            let destinationPlace = null;
+            
+            function initAutocomplete() {
+                autocompleteOrigin = new google.maps.places.Autocomplete(searchBox, {
+                    types: ['geocode'],
+                    componentRestrictions: { country: 'pt' }
+                });
                 
-                const validLogins = {
-                    'Mega': { password: '12345', driverId: 'motorista_mega' },
-                    'Heitor': { password: '12345', driverId: 'motorista_heitor' },
-                    'Joao': { password: '12345', driverId: 'motorista_joao' },
-                    'Maria': { password: '12345', driverId: 'motorista_maria' }
-                };
+                autocompleteDestination = new google.maps.places.Autocomplete(destinationBox, {
+                    types: ['geocode'],
+                    componentRestrictions: { country: 'pt' }
+                });
                 
-                if (validLogins[username] && validLogins[username].password === password) {
-                    const driverId = validLogins[username].driverId;
-                    window.location.href = `motorista.html?driver=${driverId}`;
-                } else {
-                    errorMessage.style.display = 'block';
-                }
+                autocompleteOrigin.addListener('place_changed', function() {
+                    originPlace = autocompleteOrigin.getPlace();
+                    if (!originPlace.geometry) {
+                        alert("Local não encontrado: '" + originPlace.name + "'");
+                        return;
+                    }
+                    
+                    clientPosition = originPlace.geometry.location;
+                    
+                    if (originMarker) {
+                        originMarker.setMap(null);
+                    }
+                    
+                    originMarker = new google.maps.Marker({
+                        map: map,
+                        position: originPlace.geometry.location,
+                        title: 'Sua localização',
+                        icon: getClientIcon(),
+                        optimized: true
+                    });
+                    
+                    if (destinationPlace) {
+                        calculateRoute(originPlace.geometry.location, destinationPlace.geometry.location);
+                    }
+                    
+                    const driverData = getDriverData();
+                    if (driverData && driverData.isTracking) {
+                        calculateDriverToClientRoute(driverData.position, clientPosition);
+                    }
+                });
+                
+                autocompleteDestination.addListener('place_changed', function() {
+                    destinationPlace = autocompleteDestination.getPlace();
+                    if (!destinationPlace.geometry) {
+                        alert("Local não encontrado: '" + destinationPlace.name + "'");
+                        return;
+                    }
+                    
+                    if (destinationMarker) {
+                        destinationMarker.setMap(null);
+                    }
+                    
+                    destinationMarker = new google.maps.Marker({
+                        map: map,
+                        position: destinationPlace.geometry.location,
+                        title: 'Destino: ' + destinationPlace.name,
+                        icon: {
+                            url: 'https://cdn-icons-png.flaticon.com/128/16062/16062688.png',
+                            scaledSize: new google.maps.Size(30, 30),
+                            anchor: new google.maps.Point(15, 15)
+                        }
+                    });
+                    
+                    if (originPlace) {
+                        calculateRoute(originPlace.geometry.location, destinationPlace.geometry.location);
+                    }
+                });
+            }
+            
+            driverAreaBtn.addEventListener('click', function() {
+                loginModal.style.display = 'flex';
             });
             
             loginModal.addEventListener('click', function(e) {
@@ -833,25 +898,57 @@
                     errorMessage.style.display = 'none';
                 }
             });
-        }
+            
+            loginBtn.addEventListener('click', function() {
+                const username = usernameInput.value;
+                const password = passwordInput.value;
+                
+                if (username === 'Mega' && password === '12345') {
+                    window.location.href = 'motorista.html';
+                } else {
+                    errorMessage.style.display = 'block';
+                }
+            });
+            
+            callTaxiBtn.addEventListener('click', function() {
+                if (!originPlace || !destinationPlace) {
+                    alert('Por favor, preencha tanto a origem quanto o destino.');
+                    return;
+                }
+                
+                const currentData = {
+                    origin: searchBox.value,
+                    destination: destinationBox.value,
+                    originPlace: originPlace,
+                    destinationPlace: destinationPlace,
+                    clientPosition: clientPosition,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('lisboago_current_ride', JSON.stringify(currentData));
+                
+                window.location.href = 'chamar-taxi.html';
+            });
+            
+            window.addEventListener('resize', function() {
+                google.maps.event.trigger(map, 'resize');
+            });
+            
+            initAutocomplete();
+            setupRealTimeTracking();
 
-        function getClientIcon() {
-            return {
-                url: 'data:image/svg+xml;base64,' + btoa(`
-                    <svg width="40" height="40" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="20" cy="20" r="18" fill="#1976d2" stroke="#fff" stroke-width="2"/>
-                        <circle cx="20" cy="15" r="5" fill="#fff"/>
-                        <path d="M10 35 Q20 25 30 35" stroke="#fff" stroke-width="3" fill="none"/>
-                    </svg>
-                `),
-                scaledSize: new google.maps.Size(40, 40),
-                anchor: new google.maps.Point(20, 20)
-            };
+            console.log('✅ Mapa principal inicializado com sucesso');
+            updateDebugInfo('map', 'Mapa pronto');
+            
+            // Verificar motorista ativo imediatamente após o mapa carregar
+            setTimeout(() => {
+                const driverData = getDriverData();
+                if (driverData && driverData.isTracking) {
+                    console.log('🚕 Motorista ativo detectado após carregar mapa:', driverData.position);
+                    updateDriverMarker(driverData.position);
+                    updateDebugInfo('driver', 'Motorista detectado');
+                }
+            }, 1000);
         }
-
-        // =============================================
-        // CARREGAMENTO E GESTÃO DE RECURSOS
-        // =============================================
         
         function loadGoogleMaps() {
             const script = document.createElement('script');
@@ -862,30 +959,21 @@
         }
         
         window.onload = function() {
-            console.log('📱 GoTáxi - Página mobile carregada');
+            console.log('🌐 Página inicial carregada - Sistema GLOBAL');
+            updateDebugInfo('page', 'Página carregada');
             loadGoogleMaps();
         };
 
-        // Gerenciar visibilidade da página
-        window.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                console.log('📱 Página em segundo plano - Firebase ativo');
-            } else {
-                console.log('📱 Página em primeiro plano');
-            }
-        });
-
-        // Reconectar se perder conexão
-        window.addEventListener('online', function() {
-            console.log('🌐 Conexão restaurada - reconectando Firebase');
-            if (!firebaseListener) {
-                setupFirebaseListener();
-            }
-        });
-
-        window.addEventListener('offline', function() {
-            console.log('📡 Conexão perdida - Firebase em espera');
-        });
+        // DEBUG - Monitorar status
+        setInterval(() => {
+            const driverData = getDriverData();
+            console.log('📊 Status do sistema:', {
+                driverData: driverData ? 'PRESENTE' : 'AUSENTE',
+                driverMarker: driverMarker ? 'VISÍVEL' : 'INVISÍVEL',
+                checks: driverDataCheckCount,
+                lastPosition: lastDriverPosition ? `${lastDriverPosition.lat.toFixed(6)}, ${lastDriverPosition.lng.toFixed(6)}` : 'N/A'
+            });
+        }, 10000);
     </script>
 </body>
 </html>
