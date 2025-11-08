@@ -1,5 +1,3 @@
-index.html
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -247,20 +245,9 @@ index.html
             display: none;
         }
         
-        /* Debug panel */
+        /* Debug panel - OCULTO */
         .debug-panel {
-            position: absolute;
-            top: 150px;
-            right: 20px;
-            z-index: 1000;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            font-family: monospace;
-            max-width: 300px;
-            display: none;
+            display: none !important;
         }
         
         @media (max-width: 768px) {
@@ -288,10 +275,6 @@ index.html
             
             .logo p {
                 font-size: 10px;
-            }
-            
-            .debug-panel {
-                display: none !important;
             }
         }
     </style>
@@ -354,7 +337,7 @@ index.html
         </div>
     </div>
 
-    <!-- Debug Panel -->
+    <!-- Debug Panel - OCULTO -->
     <div class="debug-panel" id="debug-panel">
         <strong>Debug Info:</strong><br>
         Status: <span id="debug-status">Carregando...</span><br>
@@ -383,7 +366,7 @@ index.html
         let driverDataCheckCount = 0;
         let lastDriverDataString = '';
         let driverAnimation = null;
-        let debugEnabled = true;
+        let debugEnabled = false; // Desativado para ocultar debug
 
         // =============================================
         // SISTEMA DE SINCRONIZAÇÃO ROBUSTO
@@ -392,10 +375,8 @@ index.html
         function setupRealTimeTracking() {
             console.log('🚕 INICIANDO SISTEMA GLOBAL DE RASTREAMENTO...');
             
-            // Mostrar painel de debug
-            if (debugEnabled) {
-                document.getElementById('debug-panel').style.display = 'block';
-            }
+            // Painel de debug permanece oculto
+            document.getElementById('debug-panel').style.display = 'none';
             
             // Limpar intervalos anteriores se existirem
             if (positionUpdateInterval) {
@@ -415,7 +396,6 @@ index.html
             window.addEventListener('storage', function(e) {
                 if (e.key === 'lisboago_driver_data') {
                     console.log('📡 EVENTO STORAGE DETECTADO - Atualizando posição do motorista');
-                    updateDebugInfo('storage', 'Evento storage detectado');
                     checkDriverStatus();
                 }
             });
@@ -423,7 +403,6 @@ index.html
             // Verificar quando a página ganha foco
             window.addEventListener('focus', function() {
                 console.log('🔄 Página em foco - verificando motorista');
-                updateDebugInfo('focus', 'Página em foco');
                 checkDriverStatus();
             });
 
@@ -431,13 +410,11 @@ index.html
             document.addEventListener('visibilitychange', function() {
                 if (!document.hidden) {
                     console.log('👀 Página visível - verificando motorista');
-                    updateDebugInfo('visibility', 'Página visível');
                     checkDriverStatus();
                 }
             });
 
             console.log('✅ Sistema global de rastreamento inicializado');
-            updateDebugInfo('system', 'Sistema iniciado');
         }
 
         // SISTEMA DE POLLING ROBUSTO
@@ -451,35 +428,10 @@ index.html
                     lastDriverDataString = currentDriverData;
                     if (currentDriverData) {
                         console.log('🔄 Polling detectou mudança nos dados');
-                        updateDebugInfo('polling', 'Dados alterados');
                         checkDriverStatus();
                     }
                 }
             }, 500);
-        }
-
-        // ATUALIZAR INFORMAÇÕES DE DEBUG
-        function updateDebugInfo(type, message) {
-            if (!debugEnabled) return;
-            
-            const debugStatus = document.getElementById('debug-status');
-            const debugDriver = document.getElementById('debug-driver');
-            const debugPosition = document.getElementById('debug-position');
-            const debugUpdated = document.getElementById('debug-updated');
-            
-            if (debugStatus) debugStatus.textContent = message;
-            
-            const driverData = getDriverData();
-            if (driverData) {
-                if (debugDriver) debugDriver.textContent = driverData.isTracking ? 'ATIVO' : 'INATIVO';
-                if (driverData.position && debugPosition) {
-                    debugPosition.textContent = `${driverData.position.lat.toFixed(4)}, ${driverData.position.lng.toFixed(4)}`;
-                }
-                if (debugUpdated) {
-                    const age = Math.round((Date.now() - driverData.timestamp)/1000);
-                    debugUpdated.textContent = `${age}s atrás`;
-                }
-            }
         }
 
         // VERIFICAÇÃO DO STATUS DO MOTORISTA - CORRIGIDA
@@ -502,8 +454,6 @@ index.html
                         age: Math.round((Date.now() - driverData.timestamp)/1000) + 's'
                     });
                     
-                    updateDebugInfo('position', `Posição atualizada #${driverDataCheckCount}`);
-                    
                     // ATUALIZAR MARCADOR DO MOTORISTA
                     updateDriverMarker(newPosition);
                     
@@ -521,13 +471,11 @@ index.html
                     if (driverDataCheckCount > 2) { // Aguardar 2 verificações
                         removeDriverMarker();
                         removeDriverToClientRoute();
-                        updateDebugInfo('error', 'Motorista não encontrado');
                         console.log(`❌ [${driverDataCheckCount}] Motorista não encontrado após ${driverDataCheckCount} verificações`);
                     }
                 } else if (driverData.isTracking === false) {
                     removeDriverMarker();
                     removeDriverToClientRoute();
-                    updateDebugInfo('status', 'Motorista parou');
                     console.log(`❌ Motorista parou o rastreamento`);
                 }
             }
@@ -557,7 +505,6 @@ index.html
                 });
                 
                 console.log('🆕 Novo marcador criado:', newPosition);
-                updateDebugInfo('marker', 'Novo marcador criado');
             }
             
             // GARANTIR que o marcador está visível
@@ -669,7 +616,6 @@ index.html
                 driverMarker.setMap(null);
                 driverMarker = null;
                 console.log('🗑️ Marcador do motorista removido');
-                updateDebugInfo('marker', 'Marcador removido');
             }
         }
 
@@ -779,7 +725,6 @@ index.html
 
         function initMap() {
             console.log('🗺️ Inicializando mapa principal...');
-            updateDebugInfo('map', 'Iniciando mapa...');
             
             const mapOptions = {
                 center: { lat: 38.7223, lng: -9.1393 },
@@ -937,7 +882,6 @@ index.html
             setupRealTimeTracking();
 
             console.log('✅ Mapa principal inicializado com sucesso');
-            updateDebugInfo('map', 'Mapa pronto');
             
             // Verificar motorista ativo imediatamente após o mapa carregar
             setTimeout(() => {
@@ -945,7 +889,6 @@ index.html
                 if (driverData && driverData.isTracking) {
                     console.log('🚕 Motorista ativo detectado após carregar mapa:', driverData.position);
                     updateDriverMarker(driverData.position);
-                    updateDebugInfo('driver', 'Motorista detectado');
                 }
             }, 1000);
         }
@@ -960,11 +903,10 @@ index.html
         
         window.onload = function() {
             console.log('🌐 Página inicial carregada - Sistema GLOBAL');
-            updateDebugInfo('page', 'Página carregada');
             loadGoogleMaps();
         };
 
-        // DEBUG - Monitorar status
+        // DEBUG - Monitorar status (apenas no console)
         setInterval(() => {
             const driverData = getDriverData();
             console.log('📊 Status do sistema:', {
@@ -975,26 +917,5 @@ index.html
             });
         }, 10000);
     </script>
-
-    <!-- Firebase App (obrigatório) -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<!-- Firebase Realtime Database -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
-<script>
-  // Sua configuração do Firebase
-  const firebaseConfig = {
-  apiKey: "AIzaSyB2ljIwjmbPF1vfCgth4bLd3d7hhLdxKIk",
-  authDomain: "lisboago-app.firebaseapp.com",
-  projectId: "lisboago-app",
-  storageBucket: "lisboago-app.firebasestorage.app",
-  messagingSenderId: "467502556237",
-  appId: "1:467502556237:web:ff0074a42a664f7efba804"
-};
-
-  // Inicializar Firebase
-  firebase.initializeApp(firebaseConfig);
-</script>
-
 </body>
 </html>
