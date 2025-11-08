@@ -1,3 +1,4 @@
+index.html
 
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -974,5 +975,26 @@
             });
         }, 10000);
     </script>
+
+    <!-- Firebase App (obrigatório) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<!-- Firebase Realtime Database -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+<script>
+  // Sua configuração do Firebase
+  const firebaseConfig = {
+  apiKey: "AIzaSyB2ljIwjmbPF1vfCgth4bLd3d7hhLdxKIk",
+  authDomain: "lisboago-app.firebaseapp.com",
+  projectId: "lisboago-app",
+  storageBucket: "lisboago-app.firebasestorage.app",
+  messagingSenderId: "467502556237",
+  appId: "1:467502556237:web:ff0074a42a664f7efba804"
+};
+
+  // Inicializar Firebase
+  firebase.initializeApp(firebaseConfig);
+</script>
+
 </body>
 </html>
