@@ -245,6 +245,43 @@
             display: none;
         }
         
+        /* Firebase status indicator */
+        .firebase-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1001;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online {
+            background-color: #0F9D58;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .status-offline {
+            background-color: #DB4437;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
         /* Debug panel - OCULTO */
         .debug-panel {
             display: none !important;
@@ -288,6 +325,12 @@
         </div>
         <button class="driver-area-btn" id="driver-area-btn">Área do Motorista</button>
     </header>
+    
+    <!-- Firebase Status Indicator -->
+    <div class="firebase-status" id="firebase-status">
+        <div class="status-dot status-offline" id="firebase-status-dot"></div>
+        <span id="firebase-status-text">Conectando...</span>
+    </div>
     
     <!-- Mapa -->
     <div id="map"></div>
@@ -337,25 +380,51 @@
         </div>
     </div>
 
-    <!-- Debug Panel - OCULTO -->
-    <div class="debug-panel" id="debug-panel">
-        <strong>Debug Info:</strong><br>
-        Status: <span id="debug-status">Carregando...</span><br>
-        Motorista: <span id="debug-driver">--</span><br>
-        Posição: <span id="debug-position">--</span><br>
-        Atualizado: <span id="debug-updated">--</span>
-    </div>
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB2ljIwjmbPF1vfCgth4bLd3d7hhLdxKIk",
+            authDomain: "lisboago-app.firebaseapp.com",
+            projectId: "lisboago-app",
+            storageBucket: "lisboago-app.firebasestorage.app",
+            messagingSenderId: "467502556237",
+            appId: "1:467502556237:web:ff0074a42a664f7efba804",
+            databaseURL: "https://lisboago-app-default-rtdb.europe-west1.firebasedatabase.app/"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        
+        // Make Firebase available globally
+        window.firebaseApp = app;
+        window.firebaseDatabase = database;
+        window.firebaseRef = ref;
+        window.firebaseSet = set;
+        window.firebaseOnValue = onValue;
+        window.firebaseOff = off;
+        
+        console.log('🔥 Firebase inicializado com sucesso');
+        
+        // Update Firebase status
+        document.getElementById('firebase-status-dot').className = 'status-dot status-online';
+        document.getElementById('firebase-status-text').textContent = 'Firebase Conectado';
+    </script>
 
     <script>
         // =============================================
-        // SISTEMA GLOBAL DE RASTREAMENTO - CORRIGIDO
+        // SISTEMA GLOBAL DE RASTREAMENTO COM FIREBASE
         // =============================================
         
         // Variáveis globais
         let map;
         let driverMarker = null;
         let lastDriverPosition = null;
-        let positionUpdateInterval = null;
         let directionsService = null;
         let directionsRenderer = null;
         let driverToClientRenderer = null;
@@ -363,82 +432,40 @@
         let destinationMarker = null;
         let currentRoute = null;
         let clientPosition = null;
-        let driverDataCheckCount = 0;
-        let lastDriverDataString = '';
-        let driverAnimation = null;
-        let debugEnabled = false; // Desativado para ocultar debug
+        let driverListener = null;
 
         // =============================================
-        // SISTEMA DE SINCRONIZAÇÃO ROBUSTO
+        // SISTEMA DE SINCRONIZAÇÃO COM FIREBASE
         // =============================================
         
         function setupRealTimeTracking() {
-            console.log('🚕 INICIANDO SISTEMA GLOBAL DE RASTREAMENTO...');
+            console.log('🚕 INICIANDO SISTEMA GLOBAL DE RASTREAMENTO COM FIREBASE...');
             
-            // Painel de debug permanece oculto
-            document.getElementById('debug-panel').style.display = 'none';
-            
-            // Limpar intervalos anteriores se existirem
-            if (positionUpdateInterval) {
-                clearInterval(positionUpdateInterval);
-            }
-            
-            // Verificar status inicial IMEDIATAMENTE
-            checkDriverStatus();
-            
-            // Sistema de polling mais agressivo
-            positionUpdateInterval = setInterval(checkDriverStatus, 800);
-            
-            // Sistema de polling adicional para localStorage
-            setupStoragePolling();
-            
-            // Event listener para mudanças no localStorage
-            window.addEventListener('storage', function(e) {
-                if (e.key === 'lisboago_driver_data') {
-                    console.log('📡 EVENTO STORAGE DETECTADO - Atualizando posição do motorista');
-                    checkDriverStatus();
-                }
-            });
-            
-            // Verificar quando a página ganha foco
-            window.addEventListener('focus', function() {
-                console.log('🔄 Página em foco - verificando motorista');
-                checkDriverStatus();
-            });
-
-            // Verificar também quando a visibilidade da página muda
-            document.addEventListener('visibilitychange', function() {
-                if (!document.hidden) {
-                    console.log('👀 Página visível - verificando motorista');
-                    checkDriverStatus();
-                }
-            });
-
-            console.log('✅ Sistema global de rastreamento inicializado');
-        }
-
-        // SISTEMA DE POLLING ROBUSTO
-        function setupStoragePolling() {
-            console.log('🔍 Iniciando polling robusto (500ms)');
-            
-            setInterval(() => {
-                const currentDriverData = localStorage.getItem('lisboago_driver_data');
+            // Configurar listener para mudanças na posição do motorista
+            if (window.firebaseDatabase && window.firebaseRef && window.firebaseOnValue) {
+                const driverRef = window.firebaseRef(window.firebaseDatabase, 'drivers/motorista_mega');
                 
-                if (currentDriverData !== lastDriverDataString) {
-                    lastDriverDataString = currentDriverData;
-                    if (currentDriverData) {
-                        console.log('🔄 Polling detectou mudança nos dados');
-                        checkDriverStatus();
-                    }
+                // Remover listener anterior se existir
+                if (driverListener) {
+                    window.firebaseOff(driverRef, driverListener);
                 }
-            }, 500);
+                
+                // Configurar novo listener
+                driverListener = window.firebaseOnValue(driverRef, (snapshot) => {
+                    const driverData = snapshot.val();
+                    handleDriverUpdate(driverData);
+                });
+                
+                console.log('✅ Listener Firebase configurado com sucesso');
+            } else {
+                console.error('❌ Firebase não está disponível');
+                // Fallback para localStorage (para compatibilidade)
+                setupLocalStorageFallback();
+            }
         }
 
-        // VERIFICAÇÃO DO STATUS DO MOTORISTA - CORRIGIDA
-        function checkDriverStatus() {
-            driverDataCheckCount++;
-            const driverData = getDriverData();
-            
+        // Handler para atualizações do motorista
+        function handleDriverUpdate(driverData) {
             if (driverData && driverData.isTracking && driverData.position) {
                 const newPosition = driverData.position;
                 
@@ -447,7 +474,7 @@
                     getDistance(lastDriverPosition, newPosition) > 5; // Só atualizar se mudou mais de 5 metros
                 
                 if (positionChanged) {
-                    console.log(`📍 [${driverDataCheckCount}] POSIÇÃO ATUALIZADA:`, {
+                    console.log(`📍 POSIÇÃO ATUALIZADA VIA FIREBASE:`, {
                         lat: newPosition.lat.toFixed(6),
                         lng: newPosition.lng.toFixed(6),
                         distance: lastDriverPosition ? getDistance(lastDriverPosition, newPosition).toFixed(1) + 'm' : 'N/A',
@@ -467,21 +494,98 @@
                 
             } else {
                 // Motorista não está ativo
-                if (!driverData) {
-                    if (driverDataCheckCount > 2) { // Aguardar 2 verificações
-                        removeDriverMarker();
-                        removeDriverToClientRoute();
-                        console.log(`❌ [${driverDataCheckCount}] Motorista não encontrado após ${driverDataCheckCount} verificações`);
-                    }
-                } else if (driverData.isTracking === false) {
-                    removeDriverMarker();
-                    removeDriverToClientRoute();
-                    console.log(`❌ Motorista parou o rastreamento`);
-                }
+                removeDriverMarker();
+                removeDriverToClientRoute();
+                console.log(`❌ Motorista não está rastreando via Firebase`);
             }
         }
 
-        // ATUALIZAR MARCADOR DO MOTORISTA - VERSÃO SIMPLIFICADA
+        // Fallback para localStorage (caso Firebase não esteja disponível)
+        function setupLocalStorageFallback() {
+            console.log('🔄 Usando fallback para localStorage');
+            
+            // Verificar status inicial
+            checkDriverStatusLocal();
+            
+            // Sistema de polling para localStorage
+            setInterval(checkDriverStatusLocal, 1000);
+            
+            // Event listener para mudanças no localStorage
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'lisboago_driver_data') {
+                    console.log('📡 EVENTO STORAGE DETECTADO - Atualizando posição do motorista');
+                    checkDriverStatusLocal();
+                }
+            });
+        }
+
+        // Verificar status do motorista via localStorage (fallback)
+        function checkDriverStatusLocal() {
+            const driverData = getDriverDataLocal();
+            
+            if (driverData && driverData.isTracking && driverData.position) {
+                const newPosition = driverData.position;
+                
+                // Verificar se a posição mudou significativamente
+                const positionChanged = !lastDriverPosition || 
+                    getDistance(lastDriverPosition, newPosition) > 5;
+                
+                if (positionChanged) {
+                    console.log(`📍 POSIÇÃO ATUALIZADA VIA LOCALSTORAGE:`, newPosition);
+                    
+                    // ATUALIZAR MARCADOR DO MOTORISTA
+                    updateDriverMarker(newPosition);
+                    
+                    // CALCULAR ROTA ENTRE MOTORISTA E CLIENTE
+                    if (clientPosition) {
+                        calculateDriverToClientRoute(newPosition, clientPosition);
+                    }
+                    
+                    lastDriverPosition = newPosition;
+                }
+                
+            } else {
+                // Motorista não está ativo
+                removeDriverMarker();
+                removeDriverToClientRoute();
+            }
+        }
+
+        // OBTER DADOS DO MOTORISTA DO LOCALSTORAGE (fallback)
+        function getDriverDataLocal() {
+            try {
+                const data = localStorage.getItem('lisboago_driver_data');
+                if (data) {
+                    const driverData = JSON.parse(data);
+                    
+                    // VERIFICAÇÃO COMPLETA dos dados
+                    if (driverData.isTracking && 
+                        driverData.position && 
+                        typeof driverData.position.lat === 'number' &&
+                        typeof driverData.position.lng === 'number' &&
+                        driverData.timestamp) {
+                        
+                        // Verificar se os dados não estão muito antigos (menos de 2 minutos)
+                        const dataAge = Date.now() - driverData.timestamp;
+                        if (dataAge < 120000) { // 2 minutos
+                            return driverData;
+                        } else {
+                            console.log('⚠️ Dados do motorista expirados:', Math.round(dataAge/1000) + 's');
+                            return null;
+                        }
+                    } else {
+                        console.log('⚠️ Dados do motorista incompletos:', driverData);
+                        return null;
+                    }
+                }
+                return null;
+            } catch (error) {
+                console.error('❌ Erro ao ler dados do motorista:', error);
+                return null;
+            }
+        }
+
+        // ATUALIZAR MARCADOR DO MOTORISTA
         function updateDriverMarker(newPosition) {
             if (!map) {
                 console.log('❌ Mapa não disponível para atualizar marcador');
@@ -572,47 +676,9 @@
             }
         }
 
-        // OBTER DADOS DO MOTORISTA - VERIFICAÇÃO ROBUSTA
-        function getDriverData() {
-            try {
-                const data = localStorage.getItem('lisboago_driver_data');
-                if (data) {
-                    const driverData = JSON.parse(data);
-                    
-                    // VERIFICAÇÃO COMPLETA dos dados
-                    if (driverData.isTracking && 
-                        driverData.position && 
-                        typeof driverData.position.lat === 'number' &&
-                        typeof driverData.position.lng === 'number' &&
-                        driverData.timestamp) {
-                        
-                        // Verificar se os dados não estão muito antigos (menos de 2 minutos)
-                        const dataAge = Date.now() - driverData.timestamp;
-                        if (dataAge < 120000) { // 2 minutos
-                            return driverData;
-                        } else {
-                            console.log('⚠️ Dados do motorista expirados:', Math.round(dataAge/1000) + 's');
-                            return null;
-                        }
-                    } else {
-                        console.log('⚠️ Dados do motorista incompletos:', driverData);
-                        return null;
-                    }
-                }
-                return null;
-            } catch (error) {
-                console.error('❌ Erro ao ler dados do motorista:', error);
-                return null;
-            }
-        }
-
         // REMOVER MARCADOR DO MOTORISTA
         function removeDriverMarker() {
             if (driverMarker) {
-                if (driverAnimation) {
-                    clearInterval(driverAnimation);
-                    driverAnimation = null;
-                }
                 driverMarker.setMap(null);
                 driverMarker = null;
                 console.log('🗑️ Marcador do motorista removido');
@@ -799,7 +865,8 @@
                         calculateRoute(originPlace.geometry.location, destinationPlace.geometry.location);
                     }
                     
-                    const driverData = getDriverData();
+                    // Verificar se há motorista ativo para calcular rota
+                    const driverData = getDriverDataLocal();
                     if (driverData && driverData.isTracking) {
                         calculateDriverToClientRoute(driverData.position, clientPosition);
                     }
@@ -885,7 +952,7 @@
             
             // Verificar motorista ativo imediatamente após o mapa carregar
             setTimeout(() => {
-                const driverData = getDriverData();
+                const driverData = getDriverDataLocal();
                 if (driverData && driverData.isTracking) {
                     console.log('🚕 Motorista ativo detectado após carregar mapa:', driverData.position);
                     updateDriverMarker(driverData.position);
@@ -902,20 +969,19 @@
         }
         
         window.onload = function() {
-            console.log('🌐 Página inicial carregada - Sistema GLOBAL');
+            console.log('🌐 Página inicial carregada - Sistema GLOBAL com Firebase');
             loadGoogleMaps();
         };
 
         // DEBUG - Monitorar status (apenas no console)
         setInterval(() => {
-            const driverData = getDriverData();
+            const driverData = getDriverDataLocal();
             console.log('📊 Status do sistema:', {
                 driverData: driverData ? 'PRESENTE' : 'AUSENTE',
                 driverMarker: driverMarker ? 'VISÍVEL' : 'INVISÍVEL',
-                checks: driverDataCheckCount,
-                lastPosition: lastDriverPosition ? `${lastDriverPosition.lat.toFixed(6)}, ${lastDriverPosition.lng.toFixed(6)}` : 'N/A'
+                firebase: window.firebaseDatabase ? 'CONECTADO' : 'DESCONECTADO'
             });
-        }, 10000);
+        }, 30000);
     </script>
 </body>
 </html>
