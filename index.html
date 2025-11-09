@@ -245,43 +245,6 @@
             display: none;
         }
         
-        /* Firebase status indicator */
-        .firebase-status {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 1001;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-        }
-        
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        
-        .status-online {
-            background-color: #0F9D58;
-            animation: pulse 1.5s infinite;
-        }
-        
-        .status-offline {
-            background-color: #DB4437;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        
         /* Debug panel - OCULTO */
         .debug-panel {
             display: none !important;
@@ -325,12 +288,6 @@
         </div>
         <button class="driver-area-btn" id="driver-area-btn">Área do Motorista</button>
     </header>
-    
-    <!-- Firebase Status Indicator -->
-    <div class="firebase-status" id="firebase-status">
-        <div class="status-dot status-offline" id="firebase-status-dot"></div>
-        <span id="firebase-status-text">Conectando...</span>
-    </div>
     
     <!-- Mapa -->
     <div id="map"></div>
@@ -384,7 +341,7 @@
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -405,15 +362,10 @@
         window.firebaseApp = app;
         window.firebaseDatabase = database;
         window.firebaseRef = ref;
-        window.firebaseSet = set;
         window.firebaseOnValue = onValue;
         window.firebaseOff = off;
         
         console.log('🔥 Firebase inicializado com sucesso');
-        
-        // Update Firebase status
-        document.getElementById('firebase-status-dot').className = 'status-dot status-online';
-        document.getElementById('firebase-status-text').textContent = 'Firebase Conectado';
     </script>
 
     <script>
@@ -453,50 +405,46 @@
                 // Configurar novo listener
                 driverListener = window.firebaseOnValue(driverRef, (snapshot) => {
                     const driverData = snapshot.val();
+                    console.log('📡 Dados recebidos do Firebase:', driverData);
                     handleDriverUpdate(driverData);
+                }, (error) => {
+                    console.error('❌ Erro no listener Firebase:', error);
+                    // Fallback para localStorage
+                    setupLocalStorageFallback();
                 });
                 
                 console.log('✅ Listener Firebase configurado com sucesso');
             } else {
                 console.error('❌ Firebase não está disponível');
-                // Fallback para localStorage (para compatibilidade)
+                // Fallback para localStorage
                 setupLocalStorageFallback();
             }
         }
 
         // Handler para atualizações do motorista
         function handleDriverUpdate(driverData) {
+            console.log('🔄 Processando dados do motorista:', driverData);
+            
             if (driverData && driverData.isTracking && driverData.position) {
                 const newPosition = driverData.position;
                 
-                // Verificar se a posição mudou significativamente
-                const positionChanged = !lastDriverPosition || 
-                    getDistance(lastDriverPosition, newPosition) > 5; // Só atualizar se mudou mais de 5 metros
+                console.log('📍 Nova posição recebida:', newPosition);
                 
-                if (positionChanged) {
-                    console.log(`📍 POSIÇÃO ATUALIZADA VIA FIREBASE:`, {
-                        lat: newPosition.lat.toFixed(6),
-                        lng: newPosition.lng.toFixed(6),
-                        distance: lastDriverPosition ? getDistance(lastDriverPosition, newPosition).toFixed(1) + 'm' : 'N/A',
-                        age: Math.round((Date.now() - driverData.timestamp)/1000) + 's'
-                    });
-                    
-                    // ATUALIZAR MARCADOR DO MOTORISTA
-                    updateDriverMarker(newPosition);
-                    
-                    // CALCULAR ROTA ENTRE MOTORISTA E CLIENTE
-                    if (clientPosition) {
-                        calculateDriverToClientRoute(newPosition, clientPosition);
-                    }
-                    
-                    lastDriverPosition = newPosition;
+                // ATUALIZAR MARCADOR DO MOTORISTA
+                updateDriverMarker(newPosition);
+                
+                // CALCULAR ROTA ENTRE MOTORISTA E CLIENTE
+                if (clientPosition) {
+                    calculateDriverToClientRoute(newPosition, clientPosition);
                 }
+                
+                lastDriverPosition = newPosition;
                 
             } else {
                 // Motorista não está ativo
+                console.log('❌ Motorista não está rastreando ou dados inválidos');
                 removeDriverMarker();
                 removeDriverToClientRoute();
-                console.log(`❌ Motorista não está rastreando via Firebase`);
             }
         }
 
@@ -508,7 +456,7 @@
             checkDriverStatusLocal();
             
             // Sistema de polling para localStorage
-            setInterval(checkDriverStatusLocal, 1000);
+            setInterval(checkDriverStatusLocal, 2000);
             
             // Event listener para mudanças no localStorage
             window.addEventListener('storage', function(e) {
@@ -526,23 +474,17 @@
             if (driverData && driverData.isTracking && driverData.position) {
                 const newPosition = driverData.position;
                 
-                // Verificar se a posição mudou significativamente
-                const positionChanged = !lastDriverPosition || 
-                    getDistance(lastDriverPosition, newPosition) > 5;
+                console.log('📍 Posição via localStorage:', newPosition);
                 
-                if (positionChanged) {
-                    console.log(`📍 POSIÇÃO ATUALIZADA VIA LOCALSTORAGE:`, newPosition);
-                    
-                    // ATUALIZAR MARCADOR DO MOTORISTA
-                    updateDriverMarker(newPosition);
-                    
-                    // CALCULAR ROTA ENTRE MOTORISTA E CLIENTE
-                    if (clientPosition) {
-                        calculateDriverToClientRoute(newPosition, clientPosition);
-                    }
-                    
-                    lastDriverPosition = newPosition;
+                // ATUALIZAR MARCADOR DO MOTORISTA
+                updateDriverMarker(newPosition);
+                
+                // CALCULAR ROTA ENTRE MOTORISTA E CLIENTE
+                if (clientPosition) {
+                    calculateDriverToClientRoute(newPosition, clientPosition);
                 }
+                
+                lastDriverPosition = newPosition;
                 
             } else {
                 // Motorista não está ativo
@@ -558,24 +500,13 @@
                 if (data) {
                     const driverData = JSON.parse(data);
                     
-                    // VERIFICAÇÃO COMPLETA dos dados
+                    // VERIFICAÇÃO dos dados
                     if (driverData.isTracking && 
                         driverData.position && 
                         typeof driverData.position.lat === 'number' &&
-                        typeof driverData.position.lng === 'number' &&
-                        driverData.timestamp) {
+                        typeof driverData.position.lng === 'number') {
                         
-                        // Verificar se os dados não estão muito antigos (menos de 2 minutos)
-                        const dataAge = Date.now() - driverData.timestamp;
-                        if (dataAge < 120000) { // 2 minutos
-                            return driverData;
-                        } else {
-                            console.log('⚠️ Dados do motorista expirados:', Math.round(dataAge/1000) + 's');
-                            return null;
-                        }
-                    } else {
-                        console.log('⚠️ Dados do motorista incompletos:', driverData);
-                        return null;
+                        return driverData;
                     }
                 }
                 return null;
@@ -585,7 +516,7 @@
             }
         }
 
-        // ATUALIZAR MARCADOR DO MOTORISTA
+        // ATUALIZAR MARCADOR DO MOTORISTA - SEM ANIMAÇÃO
         function updateDriverMarker(newPosition) {
             if (!map) {
                 console.log('❌ Mapa não disponível para atualizar marcador');
@@ -595,11 +526,11 @@
             const newLatLng = new google.maps.LatLng(newPosition.lat, newPosition.lng);
             
             if (driverMarker) {
-                // Atualização direta - sem animação complexa
+                // Atualização suave do marcador - SEM ANIMAÇÃO
                 driverMarker.setPosition(newLatLng);
                 console.log('🔄 Marcador atualizado para nova posição');
             } else {
-                // Criar novo marcador
+                // Criar novo marcador - SEM ANIMAÇÃO
                 driverMarker = new google.maps.Marker({
                     map: map,
                     position: newLatLng,
@@ -608,14 +539,35 @@
                     optimized: true
                 });
                 
-                console.log('🆕 Novo marcador criado:', newPosition);
+                console.log('🆕 NOVO MARCADOR CRIADO NO MAPA:', newPosition);
+                
+                // Centralizar o mapa no motorista
+                map.setCenter(newLatLng);
             }
             
-            // GARANTIR que o marcador está visível
-            if (driverMarker.getMap() === null) {
+            // Garantir que o marcador está visível
+            if (!driverMarker.getMap()) {
                 driverMarker.setMap(map);
                 console.log('🔧 Marcador reativado no mapa');
             }
+        }
+
+        // OBTER ÍCONE DO TÁXI - NOVO ENDEREÇO
+        function getTaxiIcon() {
+            return {
+                url: 'https://cdn-icons-png.flaticon.com/128/16062/16062688.png',
+                scaledSize: new google.maps.Size(50, 50),
+                anchor: new google.maps.Point(25, 25)
+            };
+        }
+
+        // OBTER ÍCONE DO CLIENTE
+        function getClientIcon() {
+            return {
+                url: 'https://cdn-icons-png.flaticon.com/128/16062/16062688.png',
+                scaledSize: new google.maps.Size(40, 40),
+                anchor: new google.maps.Point(20, 20)
+            };
         }
 
         // CALCULAR DISTÂNCIA ENTRE DOIS PONTOS (metros)
@@ -683,24 +635,6 @@
                 driverMarker = null;
                 console.log('🗑️ Marcador do motorista removido');
             }
-        }
-
-        // OBTER ÍCONE DO TÁXI
-        function getTaxiIcon() {
-            return {
-                url: 'https://cdn-icons-png.flaticon.com/128/16062/16062688.png',
-                scaledSize: new google.maps.Size(50, 50),
-                anchor: new google.maps.Point(25, 25)
-            };
-        }
-
-        // OBTER ÍCONE DO CLIENTE (BONEQUINHO)
-        function getClientIcon() {
-            return {
-                url: 'https://cdn-icons-png.flaticon.com/128/16062/16062688.png',
-                scaledSize: new google.maps.Size(40, 40),
-                anchor: new google.maps.Point(20, 20)
-            };
         }
 
         // =============================================
@@ -973,7 +907,7 @@
             loadGoogleMaps();
         };
 
-        // DEBUG - Monitorar status (apenas no console)
+        // DEBUG - Monitorar status
         setInterval(() => {
             const driverData = getDriverDataLocal();
             console.log('📊 Status do sistema:', {
@@ -981,7 +915,7 @@
                 driverMarker: driverMarker ? 'VISÍVEL' : 'INVISÍVEL',
                 firebase: window.firebaseDatabase ? 'CONECTADO' : 'DESCONECTADO'
             });
-        }, 30000);
+        }, 10000);
     </script>
 </body>
 </html>
