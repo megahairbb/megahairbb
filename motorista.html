@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Área do Motorista - LisboaGo</title>
+    
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -206,9 +211,31 @@
             border-left-color: #DB4437;
         }
         
-        .sync-ultra {
+        .sync-firebase {
             background: #e3f2fd;
             border-left-color: #1976d2;
+        }
+        
+        .firebase-status {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        
+        .loading {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
         }
         
         /* Footer */
@@ -293,6 +320,12 @@
     </style>
 </head>
 <body>
+    <!-- Loading -->
+    <div class="loading" id="loading">
+        <div>Carregando Área do Motorista...</div>
+        <div id="loading-status" style="font-size: 12px; margin-top: 10px;">Inicializando sistemas</div>
+    </div>
+    
     <!-- Cabeçalho -->
     <header>
         <div class="header-content">
@@ -353,8 +386,12 @@
                 </div>
                 <div class="coordinates" id="address">--</div>
                 
-                <div class="sync-status sync-ultra" id="sync-status">
-                    🔄 Sincronização GLOBAL: <span id="sync-status-text">Aguardando...</span>
+                <div class="sync-status sync-firebase" id="sync-status">
+                    🔄 Firebase: <span id="sync-status-text">Aguardando...</span>
+                </div>
+                
+                <div class="firebase-status" id="firebase-connection">
+                    🔌 Conexão Firebase: <span id="firebase-status-text">Conectando...</span>
                 </div>
                 
                 <button class="tracking-btn" id="tracking-btn">Iniciar Rastreamento</button>
@@ -393,38 +430,20 @@
         </div>
     </footer>
 
-    <!-- Firebase SDK -->
-    <script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-        // Your web app's Firebase configuration
+    <script>
+        // =============================================
+        // CONFIGURAÇÃO FIREBASE
+        // =============================================
         const firebaseConfig = {
             apiKey: "AIzaSyB2ljIwjmbPF1vfCgth4bLd3d7hhLdxKIk",
             authDomain: "lisboago-app.firebaseapp.com",
+            databaseURL: "https://lisboago-app-default-rtdb.europe-west1.firebasedatabase.app",
             projectId: "lisboago-app",
             storageBucket: "lisboago-app.firebasestorage.app",
             messagingSenderId: "467502556237",
-            appId: "1:467502556237:web:ff0074a42a664f7efba804",
-            databaseURL: "https://lisboago-app-default-rtdb.europe-west1.firebasedatabase.app/"
+            appId: "1:467502556237:web:ff0074a42a664f7efba804"
         };
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-        
-        // Make Firebase available globally
-        window.firebaseApp = app;
-        window.firebaseDatabase = database;
-        window.firebaseRef = ref;
-        window.firebaseSet = set;
-        window.firebaseOnDisconnect = onDisconnect;
-        
-        console.log('🔥 Firebase inicializado com sucesso');
-    </script>
-
-    <script>
         // =============================================
         // VARIÁVEIS GLOBAIS DO MOTORISTA
         // =============================================
@@ -436,18 +455,49 @@
         let updateSeconds = 0;
         let lastPosition = null;
         let syncCounter = 0;
+        let firebaseConnected = false;
+        let firebaseApp = null;
+        let database = null;
 
         // =============================================
-        // SISTEMA DE RASTREAMENTO COM FIREBASE
+        // FUNÇÕES DE UTILIDADE
+        // =============================================
+
+        function updateLoadingStatus(message) {
+            const loadingStatus = document.getElementById('loading-status');
+            if (loadingStatus) {
+                loadingStatus.textContent = message;
+            }
+            console.log('🔧 ' + message);
+        }
+
+        function initializeFirebase() {
+            updateLoadingStatus('Inicializando Firebase...');
+            
+            try {
+                firebaseApp = firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                
+                updateLoadingStatus('Firebase inicializado com sucesso');
+                return true;
+            } catch (error) {
+                console.error('❌ Erro ao inicializar Firebase:', error);
+                updateLoadingStatus('Erro no Firebase: ' + error.message);
+                return false;
+            }
+        }
+
+        // =============================================
+        // SISTEMA FIREBASE - MOTORISTA
         // =============================================
 
         // FUNÇÃO PRINCIPAL - Salvar posição no FIREBASE
         function saveDriverPositionToFirebase(position) {
-            if (!window.firebaseDatabase || !window.firebaseRef || !window.firebaseSet) {
-                console.error('❌ Firebase não disponível');
-                return false;
+            if (!database) {
+                console.error('❌ Database não inicializado');
+                return;
             }
-            
+
             const driverData = {
                 isTracking: true,
                 position: {
@@ -458,35 +508,84 @@
                 driverId: 'motorista_mega',
                 driverName: 'Mega Hair',
                 phone: '+351 939 354 112',
-                lastUpdate: new Date().toLocaleTimeString('pt-BR')
+                lastUpdate: new Date().toLocaleTimeString('pt-BR'),
+                accuracy: position.coords.accuracy
             };
             
             try {
-                console.log('🔥 SALVANDO POSIÇÃO NO FIREBASE:', driverData.position);
+                console.log('🔥 SALVANDO NO FIREBASE:', driverData.position);
                 
-                // Salvar no Firebase
-                const driverRef = window.firebaseRef(window.firebaseDatabase, 'drivers/motorista_mega');
-                window.firebaseSet(driverRef, driverData);
-                
-                // Configurar onDisconnect para limpar dados quando desconectar
-                window.firebaseOnDisconnect(driverRef).set({
-                    isTracking: false,
-                    timestamp: Date.now(),
-                    lastUpdate: new Date().toLocaleTimeString('pt-BR'),
-                    message: 'Motorista desconectado'
-                });
-                
-                syncCounter++;
-                updateSyncStatus('ultra', `Sincronizado ${syncCounter}x`);
-                console.log('✅ Posição salva no FIREBASE para todas as páginas');
-                
-                return true;
+                // Salvar no Firebase Realtime Database
+                database.ref('drivers/motorista_mega').set(driverData)
+                    .then(() => {
+                        syncCounter++;
+                        updateSyncStatus('firebase', `Firebase: ${syncCounter} atualizações`);
+                        console.log('✅ Posição salva no Firebase com sucesso');
+                    })
+                    .catch((error) => {
+                        console.error('❌ Erro ao salvar no Firebase:', error);
+                        updateSyncStatus('error', 'Erro Firebase: ' + error.message);
+                    });
                 
             } catch (error) {
-                console.error('❌ Erro ao salvar no Firebase:', error);
-                updateSyncStatus('error', 'Erro na sincronização Firebase');
-                return false;
+                console.error('❌ Erro geral Firebase:', error);
+                updateSyncStatus('error', 'Erro de conexão');
             }
+        }
+
+        // PARAR RASTREAMENTO NO FIREBASE
+        function stopFirebaseTracking() {
+            if (!database) {
+                console.error('❌ Database não inicializado');
+                return;
+            }
+
+            const stopData = {
+                isTracking: false,
+                timestamp: Date.now(),
+                stopped: true,
+                lastUpdate: new Date().toLocaleTimeString('pt-BR'),
+                message: 'Rastreamento parado pelo motorista'
+            };
+            
+            database.ref('drivers/motorista_mega').set(stopData)
+                .then(() => {
+                    console.log('🛑 Estado de PARADA salvo no Firebase');
+                    updateSyncStatus('error', 'Rastreamento PARADO - Firebase atualizado');
+                })
+                .catch((error) => {
+                    console.error('❌ Erro ao parar no Firebase:', error);
+                });
+        }
+
+        // MONITORAR CONEXÃO FIREBASE
+        function setupFirebaseConnectionMonitoring() {
+            if (!database) {
+                console.error('❌ Database não inicializado');
+                return;
+            }
+
+            database.ref('.info/connected').on('value', (snapshot) => {
+                const connected = snapshot.val();
+                firebaseConnected = connected;
+                
+                const statusElement = document.getElementById('firebase-connection');
+                const statusText = document.getElementById('firebase-status-text');
+                
+                if (connected) {
+                    console.log('✅ Conectado ao Firebase');
+                    statusElement.style.background = '#e8f5e8';
+                    statusElement.style.borderLeftColor = '#0F9D58';
+                    statusText.textContent = 'Conectado';
+                    statusText.style.color = '#0F9D58';
+                } else {
+                    console.log('❌ Desconectado do Firebase');
+                    statusElement.style.background = '#ffeaea';
+                    statusElement.style.borderLeftColor = '#DB4437';
+                    statusText.textContent = 'Desconectado';
+                    statusText.style.color = '#DB4437';
+                }
+            });
         }
 
         // Função para atualizar status da sincronização
@@ -496,8 +595,8 @@
             
             if (syncStatus && syncStatusText) {
                 syncStatus.className = 'sync-status';
-                if (type === 'ultra') {
-                    syncStatus.classList.add('sync-ultra');
+                if (type === 'firebase') {
+                    syncStatus.classList.add('sync-firebase');
                 } else if (type === 'success') {
                     syncStatus.classList.add('sync-success');
                 } else if (type === 'error') {
@@ -534,7 +633,8 @@
                     function(position) {
                         console.log('📍 Nova posição GPS detectada:', {
                             lat: position.coords.latitude,
-                            lng: position.coords.longitude
+                            lng: position.coords.longitude,
+                            accuracy: position.coords.accuracy + 'm'
                         });
                         
                         const pos = {
@@ -542,13 +642,10 @@
                             lng: position.coords.longitude
                         };
                         
-                        // 1. SALVAR NO FIREBASE (para outras páginas/dispositivos)
+                        // 1. SALVAR NO FIREBASE
                         saveDriverPositionToFirebase(position);
                         
-                        // 2. SALVAR NO LOCALSTORAGE (fallback)
-                        saveDriverPositionToLocalStorage(position);
-                        
-                        // 3. ATUALIZAR MAPA LOCAL
+                        // 2. ATUALIZAR MAPA LOCAL
                         if (map) {
                             // Centralizar mapa na nova posição
                             map.setCenter(pos);
@@ -569,11 +666,11 @@
                             }
                         }
                         
-                        // 4. ATUALIZAR INFORMAÇÕES DA INTERFACE
+                        // 3. ATUALIZAR INFORMAÇÕES DA INTERFACE
                         updateAddressInfo(new google.maps.LatLng(pos.lat, pos.lng));
                         lastPosition = pos;
                         
-                        // 5. REINICIAR CONTADOR DE ATUALIZAÇÃO
+                        // 4. REINICIAR CONTADOR DE ATUALIZAÇÃO
                         updateSeconds = 0;
                         if (document.getElementById('update-seconds')) {
                             document.getElementById('update-seconds').textContent = '0 segundos';
@@ -614,40 +711,17 @@
                 // INICIAR CONTADOR DE TEMPO
                 startUpdateTimer();
                 
-                console.log('✅ Rastreamento GLOBAL com Firebase iniciado com sucesso');
-                updateSyncStatus('ultra', 'Sincronização GLOBAL ativa!');
+                console.log('✅ Rastreamento FIREBASE iniciado com sucesso');
+                updateSyncStatus('firebase', 'Sincronização FIREBASE ativa!');
                 
             } else {
                 alert('❌ Seu navegador não suporta geolocalização.');
             }
         }
 
-        // Salvar posição no localStorage (fallback)
-        function saveDriverPositionToLocalStorage(position) {
-            const driverData = {
-                isTracking: true,
-                position: {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                },
-                timestamp: Date.now(),
-                driverId: 'motorista_mega',
-                driverName: 'Mega Hair',
-                phone: '+351 939 354 112',
-                lastUpdate: new Date().toLocaleTimeString('pt-BR')
-            };
-            
-            try {
-                localStorage.setItem('lisboago_driver_data', JSON.stringify(driverData));
-                console.log('💾 Backup salvo no localStorage');
-            } catch (error) {
-                console.error('❌ Erro ao salvar no localStorage:', error);
-            }
-        }
-
-        // FUNÇÃO PARA PARAR RASTREAMENTO - VERSÃO FIREBASE
+        // FUNÇÃO PARA PARAR RASTREAMENTO
         function stopDriverTracking() {
-            console.log('🛑 PARANDO RASTREAMENTO GPS...');
+            console.log('🛑 PARANDO RASTREAMENTO GPS E FIREBASE...');
             
             // 1. PARAR WATCH POSITION
             if (driverTrackingInterval && navigator.geolocation) {
@@ -662,42 +736,9 @@
             }
             
             // 3. SALVAR ESTADO DE PARADA NO FIREBASE
-            if (window.firebaseDatabase && window.firebaseRef && window.firebaseSet) {
-                try {
-                    const stopData = {
-                        isTracking: false,
-                        timestamp: Date.now(),
-                        stopped: true,
-                        lastUpdate: new Date().toLocaleTimeString('pt-BR'),
-                        message: 'Rastreamento parado pelo motorista'
-                    };
-                    
-                    const driverRef = window.firebaseRef(window.firebaseDatabase, 'drivers/motorista_mega');
-                    window.firebaseSet(driverRef, stopData);
-                    
-                    console.log('🛑 Estado de PARADA salvo no Firebase');
-                    
-                } catch (error) {
-                    console.error('❌ Erro ao salvar estado de parada no Firebase:', error);
-                }
-            }
+            stopFirebaseTracking();
             
-            // 4. SALVAR ESTADO DE PARADA NO LOCALSTORAGE (fallback)
-            try {
-                const stopData = {
-                    isTracking: false,
-                    timestamp: Date.now(),
-                    stopped: true,
-                    lastUpdate: new Date().toLocaleTimeString('pt-BR'),
-                    message: 'Rastreamento parado pelo motorista'
-                };
-                localStorage.setItem('lisboago_driver_data', JSON.stringify(stopData));
-                console.log('🛑 Estado de PARADA salvo no localStorage');
-            } catch (error) {
-                console.error('❌ Erro ao salvar estado de parada no localStorage:', error);
-            }
-            
-            // 5. ATUALIZAR INTERFACE - Rastreamento INATIVO
+            // 4. ATUALIZAR INTERFACE
             isDriverTracking = false;
             syncCounter = 0;
             
@@ -724,7 +765,7 @@
             }, 1000);
         }
 
-        // Atualizar informações de endereço (geocodificação)
+        // Atualizar informações de endereço
         function updateAddressInfo(position) {
             const coordinates = document.getElementById('coordinates');
             const address = document.getElementById('address');
@@ -736,14 +777,10 @@
             if (address) {
                 const geocoder = new google.maps.Geocoder();
                 geocoder.geocode({ location: position }, function(results, status) {
-                    if (status === 'OK') {
-                        if (results[0]) {
-                            address.textContent = results[0].formatted_address;
-                        } else {
-                            address.textContent = "Endereço não encontrado";
-                        }
+                    if (status === 'OK' && results[0]) {
+                        address.textContent = results[0].formatted_address;
                     } else {
-                        address.textContent = "Erro ao buscar endereço";
+                        address.textContent = "Endereço não encontrado";
                     }
                 });
             }
@@ -752,7 +789,7 @@
         // Obter ícone do táxi
         function getTaxiIcon() {
             return {
-                url: 'https://cdn-icons-png.flaticon.com/128/16062/16062688.png',
+                url: 'https://cdn-icons-png.flaticon.com/512/16062/16062688.png',
                 scaledSize: new google.maps.Size(50, 50),
                 anchor: new google.maps.Point(25, 25)
             };
@@ -763,9 +800,10 @@
         // =============================================
 
         function initMap() {
+            updateLoadingStatus('Inicializando mapa...');
+            
             console.log('🗺️ Inicializando mapa do motorista...');
             
-            // Configuração inicial do mapa
             const mapOptions = {
                 center: { lat: 38.7223, lng: -9.1393 },
                 zoom: 12,
@@ -775,48 +813,49 @@
                 mapTypeControl: true
             };
             
-            // Criar o mapa
             map = new google.maps.Map(document.getElementById('map'), mapOptions);
             
             // ELEMENTOS DA INTERFACE
             const trackingBtn = document.getElementById('tracking-btn');
             const logoutBtn = document.getElementById('logout-btn');
             
-            // EVENT LISTENERS
+            // CONFIGURAR MONITORAMENTO FIREBASE
+            setupFirebaseConnectionMonitoring();
             
-            // 1. BOTÃO DE RASTREAMENTO
+            // EVENT LISTENERS
             trackingBtn.addEventListener('click', function() {
                 console.log('🖱️ Botão de rastreamento clicado');
                 toggleTracking();
             });
             
-            // 2. BOTÃO DE LOGOUT
             logoutBtn.addEventListener('click', function() {
                 if (confirm('Deseja sair da área do motorista?')) {
-                    console.log('🚪 Logout solicitado');
-                    // Parar rastreamento antes de sair
                     if (isDriverTracking) {
-                        console.log('🛑 Parando rastreamento antes do logout...');
                         stopDriverTracking();
                     }
                     window.location.href = 'index.html';
                 }
             });
             
-            // 3. AJUSTAR MAPA NO REDIMENSIONAMENTO
-            window.addEventListener('resize', function() {
-                google.maps.event.trigger(map, 'resize');
-            });
+            // Esconder loading
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 1000);
             
-            console.log('✅ Mapa do motorista inicializado - Sistema GLOBAL com Firebase pronto');
+            console.log('✅ Mapa do motorista inicializado');
         }
         
-        // Carregar a API do Google Maps
+        // Carregar Google Maps
         function loadGoogleMaps() {
+            updateLoadingStatus('Carregando Google Maps...');
+            
             const script = document.createElement('script');
             script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBmc6HTJo70N_ueR1qFVgyu74v7FIl7dU4&callback=initMap`;
             script.async = true;
             script.defer = true;
+            script.onerror = function() {
+                updateLoadingStatus('Erro ao carregar Google Maps');
+            };
             document.head.appendChild(script);
         }
         
@@ -825,8 +864,16 @@
         // =============================================
         
         window.onload = function() {
-            console.log('🌐 Página do motorista carregada - Sistema GLOBAL com Firebase');
-            loadGoogleMaps();
+            console.log('🌐 Página do motorista carregada');
+            updateLoadingStatus('Iniciando aplicação...');
+            
+            // Inicializar Firebase primeiro
+            if (initializeFirebase()) {
+                // Carregar Google Maps
+                loadGoogleMaps();
+            } else {
+                updateLoadingStatus('Falha na inicialização. Recarregue a página.');
+            }
         };
     </script>
 </body>
