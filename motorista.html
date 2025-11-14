@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Área do Motorista - LisboaGo</title>
+    <title>Área do Motorista - GoTaxi</title>
     
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -11,90 +11,158 @@
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f5f5f5; 
+            margin: 0;
+            padding: 0;
+        }
         
         header {
             background: #000; color: white; padding: 15px 20px;
             display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
         
-        .logo h1 { font-size: 24px; color: #FFD700; }
+        .logo h1 { font-size: 24px; color: #4CAF50; margin: 0; }
+        .logo p { margin: 0; opacity: 0.8; font-size: 14px; }
         
         .logout-btn {
-            background: #DB4437; color: white; border: none;
+            background: #f44336; color: white; border: none;
             padding: 10px 20px; border-radius: 5px; cursor: pointer;
+            font-weight: 600; transition: all 0.3s;
         }
+        
+        .logout-btn:hover { background: #d32f2f; transform: translateY(-2px); }
         
         .main-container {
             max-width: 1200px; margin: 20px auto; padding: 0 20px;
             display: grid; grid-template-columns: 1fr 350px; gap: 20px;
         }
         
-        #map { height: 500px; width: 100%; border-radius: 10px; }
+        #map { 
+            height: 500px; width: 100%; 
+            border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
         
         .driver-panel {
             background: white; padding: 20px; border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
         .tracking-btn {
-            background: #0F9D58; color: white; border: none;
+            background: #4CAF50; color: white; border: none;
             padding: 15px; border-radius: 8px; cursor: pointer;
             font-size: 16px; font-weight: bold; width: 100%;
-            margin-top: 15px;
+            margin-top: 15px; transition: all 0.3s;
         }
         
-        .tracking-active { background: #DB4437; }
+        .tracking-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3); }
+        .tracking-active { background: #f44336; }
+        .tracking-active:hover { box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3); }
         
         .coordinates {
             background: #f8f9fa; padding: 10px; border-radius: 5px;
             font-family: monospace; margin: 10px 0;
+            border-left: 4px solid #4CAF50;
         }
         
-        .sync-status {
-            padding: 10px; border-radius: 5px; margin: 10px 0;
-            background: #e3f2fd;
+        .status-info {
+            padding: 12px; border-radius: 5px; margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .online { background: #e8f5e8; border-left: 4px solid #4CAF50; color: #2e7d32; }
+        .offline { background: #ffebee; border-left: 4px solid #f44336; color: #c62828; }
+        .firebase { background: #e3f2fd; border-left: 4px solid #2196F3; color: #1565c0; }
+        
+        .driver-info {
+            background: #fff3cd; padding: 10px; border-radius: 5px;
+            margin: 10px 0; border-left: 4px solid #ffc107;
+        }
+        
+        .update-count {
+            font-size: 12px; color: #666; text-align: center;
+            margin-top: 10px; background: #f5f5f5; padding: 5px;
+            border-radius: 3px;
+        }
+        
+        .loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px;
+            z-index: 1000; text-align: center;
         }
     </style>
 </head>
 <body>
+    <div class="loading" id="loading">
+        <div>🚕 Iniciando Área do Motorista...</div>
+        <div id="loading-status" style="font-size: 12px; margin-top: 10px;">Carregando sistemas</div>
+    </div>
+    
     <header>
         <div class="logo">
-            <h1>LisboaGo - Motorista</h1>
+            <h1>GoTaxi - Motorista</h1>
             <p>Bem-vindo, Mega Hair</p>
         </div>
-        <button class="logout-btn" id="logout-btn">Sair</button>
+        <button class="logout-btn" id="logout-btn">🚪 Sair</button>
     </header>
     
     <div class="main-container">
-        <div id="map"></div>
+        <div>
+            <div id="map"></div>
+        </div>
         
         <div class="driver-panel">
-            <h2>Controle do Motorista</h2>
+            <h2 style="color: #000; margin-bottom: 20px;">📱 Controle do Motorista</h2>
             
-            <div class="sync-status" id="sync-status">
-                <strong>Sincronização:</strong> Conectando...
+            <div class="driver-info">
+                <strong>👤 Mega Hair</strong><br>
+                📞 +351 939 354 112<br>
+                ✉️ megahairbb@hotmail.com<br>
+                🚗 GoTaxi Premium
+            </div>
+            
+            <div class="status-info offline" id="status-info">
+                <strong>Status:</strong> <span id="tracking-status">🔴 OFFLINE</span>
             </div>
             
             <div>
-                <strong>Sua Localização:</strong>
-                <div class="coordinates" id="coordinates">-</div>
+                <strong>📍 Sua Localização:</strong>
+                <div class="coordinates" id="coordinates">Aguardando GPS...</div>
+            </div>
+            
+            <div class="status-info firebase" id="sync-info">
+                <strong>🌐 Sincronização:</strong> <span id="sync-status">Conectando...</span>
             </div>
             
             <button class="tracking-btn" id="tracking-btn">
                 ▶️ INICIAR RASTREAMENTO
             </button>
+            
+            <div class="update-count" id="update-count">
+                Atualizações: 0
+            </div>
+            
+            <div style="margin-top: 15px; font-size: 12px; color: #666; text-align: center;">
+                <p>📍 Sua localização será visível para os clientes</p>
+                <p>🔄 Atualização automática em tempo real</p>
+            </div>
         </div>
     </div>
 
     <script>
+        // =============================================
+        // CONFIGURAÇÃO FIREBASE - GO TAXI (CONFIGURAÇÕES REAIS)
+        // =============================================
         const firebaseConfig = {
-            apiKey: "AIzaSyB2ljIwjmbPF1vfCgth4bLd3d7hhLdxKIk",
-            authDomain: "lisboago-app.firebaseapp.com",
-            databaseURL: "https://lisboago-app-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "lisboago-app",
-            storageBucket: "lisboago-app.firebasestorage.app",
-            messagingSenderId: "467502556237",
-            appId: "1:467502556237:web:ff0074a42a664f7efba804"
+            apiKey: "AIzaSyAZ4YqmOZz0wUlhBvuSD_fBLcwq1av8yc8",
+            authDomain: "gotaxi-4e391.firebaseapp.com",
+            databaseURL: "https://gotaxi-4e391-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "gotaxi-4e391",
+            storageBucket: "gotaxi-4e391.firebasestorage.app",
+            messagingSenderId: "597857194128",
+            appId: "1:597857194128:web:9b550abd9b5e98bb374815"
         };
 
         let driverTrackingInterval = null;
@@ -102,36 +170,72 @@
         let map;
         let driverMarker = null;
         let database = null;
+        let useFirebase = false;
+        let updateCount = 0;
+
+        function updateLoadingStatus(message) {
+            const loadingStatus = document.getElementById('loading-status');
+            if (loadingStatus) loadingStatus.textContent = message;
+            console.log('🔧 ' + message);
+        }
 
         function initializeFirebase() {
+            updateLoadingStatus('Conectando ao Firebase...');
+            
             try {
                 firebase.initializeApp(firebaseConfig);
                 database = firebase.database();
+                useFirebase = true;
                 
-                document.getElementById('sync-status').innerHTML = 
-                    '<strong>Sincronização:</strong> <span style="color: #0F9D58;">✅ FIREBASE CONECTADO</span>';
-                console.log('✅ Firebase conectado no motorista');
-                return true;
+                // Testar escrita
+                return database.ref('system/driver_connection').set({
+                    timestamp: Date.now(),
+                    status: 'driver_connected',
+                    driver: 'Mega Hair'
+                }).then(() => {
+                    document.getElementById('sync-status').textContent = '✅ FIREBASE CONECTADO';
+                    document.getElementById('sync-info').className = 'status-info firebase';
+                    updateLoadingStatus('Firebase conectado com sucesso');
+                    console.log('✅ Firebase GoTaxi conectado no motorista!');
+                    return true;
+                }).catch((error) => {
+                    console.error('❌ Erro Firebase:', error);
+                    useFirebase = false;
+                    document.getElementById('sync-status').textContent = '🔧 MODO LOCAL';
+                    document.getElementById('sync-info').className = 'status-info offline';
+                    updateLoadingStatus('Usando modo local');
+                    return false;
+                });
                 
             } catch (error) {
-                document.getElementById('sync-status').innerHTML = 
-                    '<strong>Sincronização:</strong> <span style="color: #ff9800;">🔧 MODO LOCAL</span>';
-                console.log('⚠️ Firebase não disponível');
-                return false;
+                console.error('❌ Erro ao inicializar Firebase:', error);
+                useFirebase = false;
+                document.getElementById('sync-status').textContent = '🔧 MODO LOCAL';
+                document.getElementById('sync-info').className = 'status-info offline';
+                updateLoadingStatus('Firebase não disponível');
+                return Promise.resolve(false);
             }
         }
 
         function initMap() {
-            console.log('🗺️ Mapa do motorista inicializado');
+            updateLoadingStatus('Carregando mapa...');
+            console.log('🗺️ Inicializando mapa GoTaxi Motorista...');
             
             map = new google.maps.Map(document.getElementById('map'), {
                 center: { lat: 38.7223, lng: -9.1393 },
-                zoom: 13
+                zoom: 13,
+                styles: [
+                    {
+                        featureType: "poi",
+                        elementType: "labels",
+                        stylers: [{ visibility: "off" }]
+                    }
+                ]
             });
 
             document.getElementById('tracking-btn').addEventListener('click', toggleTracking);
             document.getElementById('logout-btn').addEventListener('click', function() {
-                if (confirm('Sair da área do motorista?')) {
+                if (confirm('Deseja sair da área do motorista?')) {
                     if (isDriverTracking) {
                         stopTracking();
                     }
@@ -141,6 +245,13 @@
 
             // Inicializar Firebase
             initializeFirebase();
+            
+            // Esconder loading
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 2000);
+            
+            console.log('✅ GoTaxi Motorista pronto!');
         }
 
         function toggleTracking() {
@@ -153,54 +264,79 @@
 
         function startTracking() {
             if (!navigator.geolocation) {
-                alert('Seu navegador não suporta geolocalização.');
+                alert('❌ Seu navegador não suporta geolocalização.');
                 return;
             }
 
-            console.log('🚕 INICIANDO RASTREAMENTO...');
+            console.log('🚕 INICIANDO RASTREAMENTO GO TAXI...');
+            
+            const geoOptions = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            };
             
             driverTrackingInterval = navigator.geolocation.watchPosition(
                 function(position) {
+                    updateCount++;
                     const pos = {
                         lat: position.coords.latitude,
                         lng: position.coords.longitude
                     };
                     
-                    console.log('📍 Posição:', pos);
+                    console.log(`📍 [${updateCount}] GoTaxi Posição:`, pos);
                     
-                    // Salvar dados
+                    // Dados do motorista
                     const driverData = {
-                        isTracking: true,
+                        isOnline: true,
                         position: pos,
                         timestamp: Date.now(),
-                        driverName: 'Mega Hair'
+                        driverName: 'Mega Hair',
+                        phone: '+351 939 354 112',
+                        vehicle: 'GoTaxi Premium',
+                        updateCount: updateCount
                     };
                     
-                    // Salvar no Firebase se disponível
-                    if (database) {
-                        database.ref('drivers/mega').set(driverData)
-                            .then(() => console.log('✅ Salvo no Firebase'))
+                    // Salvar no Firebase
+                    if (useFirebase && database) {
+                        database.ref('drivers/active/mega').set(driverData)
+                            .then(() => console.log('✅ Salvo no Firebase GoTaxi'))
                             .catch(error => console.log('❌ Erro Firebase:', error));
                     }
                     
                     // Salvar no localStorage também
-                    localStorage.setItem('lisboago_driver', JSON.stringify(driverData));
+                    localStorage.setItem('gotaxi_driver_mega', JSON.stringify(driverData));
                     
                     // Atualizar interface
                     updateDriverMarker(pos);
                     document.getElementById('coordinates').textContent = 
                         `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+                    document.getElementById('update-count').textContent = 
+                        `Atualizações: ${updateCount}`;
                     
                 },
                 function(error) {
-                    alert('Erro de GPS: ' + error.message);
+                    let errorMsg = 'Erro de GPS';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED: errorMsg = 'Permissão de localização negada'; break;
+                        case error.POSITION_UNAVAILABLE: errorMsg = 'Localização indisponível'; break;
+                        case error.TIMEOUT: errorMsg = 'Tempo limite excedido'; break;
+                    }
+                    
+                    alert('❌ ' + errorMsg);
+                    console.error('GPS Error:', error);
+                    stopTracking();
                 },
-                { enableHighAccuracy: true }
+                geoOptions
             );
             
             isDriverTracking = true;
             document.getElementById('tracking-btn').textContent = '🛑 PARAR RASTREAMENTO';
             document.getElementById('tracking-btn').classList.add('tracking-active');
+            document.getElementById('tracking-status').textContent = '🟢 ONLINE - GO TAXI';
+            document.getElementById('status-info').className = 'status-info online';
+            
+            console.log('✅ Rastreamento GoTaxi iniciado');
         }
 
         function stopTracking() {
@@ -208,24 +344,34 @@
                 navigator.geolocation.clearWatch(driverTrackingInterval);
             }
             
-            // Salvar estado parado
-            const stopData = { isTracking: false, timestamp: Date.now() };
+            // Dados de parada
+            const stopData = { 
+                isOnline: false, 
+                timestamp: Date.now(),
+                message: 'Motorista GoTaxi offline' 
+            };
             
-            if (database) {
-                database.ref('drivers/mega').set(stopData);
+            if (useFirebase && database) {
+                database.ref('drivers/active/mega').set(stopData);
             }
             
-            localStorage.setItem('lisboago_driver', JSON.stringify(stopData));
+            localStorage.setItem('gotaxi_driver_mega', JSON.stringify(stopData));
             
             isDriverTracking = false;
+            updateCount = 0;
             document.getElementById('tracking-btn').textContent = '▶️ INICIAR RASTREAMENTO';
             document.getElementById('tracking-btn').classList.remove('tracking-active');
-            document.getElementById('coordinates').textContent = '-';
+            document.getElementById('tracking-status').textContent = '🔴 OFFLINE';
+            document.getElementById('status-info').className = 'status-info offline';
+            document.getElementById('coordinates').textContent = 'Rastreamento parado';
+            document.getElementById('update-count').textContent = 'Atualizações: 0';
             
             if (driverMarker) {
                 driverMarker.setMap(null);
                 driverMarker = null;
             }
+            
+            console.log('🛑 Rastreamento GoTaxi parado');
         }
 
         function updateDriverMarker(position) {
@@ -237,14 +383,16 @@
                 driverMarker = new google.maps.Marker({
                     map: map,
                     position: latLng,
-                    title: 'Sua Localização',
+                    title: 'GoTaxi - Sua Localização',
                     icon: {
-                        url: 'https://maps.google.com/mapfiles/ms/icons/cabs.png',
-                        scaledSize: new google.maps.Size(40, 40)
+                        url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMjAiIGZpbGw9IiM0Q0FGNTAiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjx0ZXh0IHg9IjI1IiB5PSIzMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzAwMCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmb250LXdlaWdodD0iYm9sZCI+R1Q8L3RleHQ+Cjwvc3ZnPgo=',
+                        scaledSize: new google.maps.Size(50, 50),
+                        anchor: new google.maps.Point(25, 25)
                     }
                 });
                 
                 map.setCenter(latLng);
+                map.setZoom(15);
             }
         }
 
