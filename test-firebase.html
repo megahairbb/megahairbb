@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste Firebase - LisboaGo</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+    <h1>🧪 Teste de Conexão Firebase</h1>
+    <div id="status" style="padding: 20px; margin: 10px; border-radius: 5px; background: #f0f0f0;"></div>
+    <button onclick="testFirebase()">Testar Firebase</button>
+    <button onclick="testWrite()">Testar Escrita</button>
+    <button onclick="testRead()">Testar Leitura</button>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyB2ljIwjmbPF1vfCgth4bLd3d7hhLdxKIk",
+            authDomain: "lisboago-app.firebaseapp.com",
+            databaseURL: "https://lisboago-app-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "lisboago-app",
+            storageBucket: "lisboago-app.firebasestorage.app",
+            messagingSenderId: "467502556237",
+            appId: "1:467502556237:web:ff0074a42a664f7efba804"
+        };
+
+        let database;
+
+        function log(message, isError = false) {
+            const status = document.getElementById('status');
+            const color = isError ? '#ff4444' : '#44ff44';
+            status.innerHTML += `<div style="color: ${color}; margin: 5px 0;">${message}</div>`;
+            console.log(message);
+        }
+
+        function testFirebase() {
+            log('🔧 Inicializando Firebase...');
+            
+            try {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                log('✅ Firebase inicializado');
+                
+                // Testar conexão
+                database.ref('.info/connected').on('value', (snapshot) => {
+                    if (snapshot.val() === true) {
+                        log('🌐 CONECTADO ao Firebase Realtime Database!');
+                    } else {
+                        log('❌ DESCONECTADO do Firebase');
+                    }
+                });
+                
+            } catch (error) {
+                log('❌ Erro ao inicializar Firebase: ' + error.message, true);
+            }
+        }
+
+        function testWrite() {
+            if (!database) {
+                log('❌ Firebase não inicializado', true);
+                return;
+            }
+            
+            log('📝 Testando escrita...');
+            
+            const testData = {
+                message: 'Teste de conexão',
+                timestamp: Date.now(),
+                success: true
+            };
+            
+            database.ref('test_connection').set(testData)
+                .then(() => {
+                    log('✅ Escrita bem-sucedida!');
+                })
+                .catch((error) => {
+                    log('❌ Erro na escrita: ' + error.message, true);
+                    log('🔍 Código do erro: ' + error.code, true);
+                });
+        }
+
+        function testRead() {
+            if (!database) {
+                log('❌ Firebase não inicializado', true);
+                return;
+            }
+            
+            log('📖 Testando leitura...');
+            
+            database.ref('test_connection').once('value')
+                .then((snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        log('✅ Leitura bem-sucedida: ' + JSON.stringify(data));
+                    } else {
+                        log('ℹ️ Nenhum dado encontrado');
+                    }
+                })
+                .catch((error) => {
+                    log('❌ Erro na leitura: ' + error.message, true);
+                    log('🔍 Código do erro: ' + error.code, true);
+                });
+        }
+    </script>
+</body>
+</html>
