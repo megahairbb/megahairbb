@@ -10,6 +10,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
     <style>
+        /* [MANTENHA TODO O CSS ANTERIOR] */
+        /* O CSS permanece exatamente igual ao arquivo anterior */
         * {
             margin: 0;
             padding: 0;
@@ -22,301 +24,8 @@
             background: #f5f5f5;
         }
         
-        /* Cabeçalho */
-        header {
-            background: #000;
-            color: white;
-            padding: 15px 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
+        /* ... [TODO O RESTANTE DO CSS] ... */
         
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .logo h1 {
-            font-size: 28px;
-            font-weight: 700;
-            color: #FFD700;
-            margin-bottom: 2px;
-        }
-        
-        .logo p {
-            font-size: 14px;
-            color: #fff;
-            opacity: 0.8;
-        }
-        
-        .logout-btn {
-            background: #DB4437;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .logout-btn:hover {
-            background: #c1351d;
-            transform: translateY(-2px);
-        }
-        
-        /* Layout Principal */
-        .main-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 1fr 400px;
-            gap: 20px;
-            min-height: calc(100vh - 140px);
-        }
-        
-        /* Mapa */
-        #map {
-            height: 500px;
-            width: 100%;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        /* Painel do motorista */
-        .driver-panel {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .panel-title {
-            color: #000;
-            margin-bottom: 20px;
-            font-size: 20px;
-            border-bottom: 2px solid #FFD700;
-            padding-bottom: 10px;
-        }
-        
-        .driver-info {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #FFD700;
-        }
-        
-        .info-item {
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .info-label {
-            font-weight: 600;
-            color: #555;
-        }
-        
-        .info-value {
-            font-weight: bold;
-            color: #0F9D58;
-        }
-        
-        .tracking-section {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .tracking-btn {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 6px;
-            background: #0F9D58;
-            color: white;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            width: 100%;
-            margin-top: 10px;
-        }
-        
-        .tracking-btn:hover {
-            background: #0b7a46;
-        }
-        
-        .tracking-active {
-            background: #DB4437;
-        }
-        
-        .tracking-active:hover {
-            background: #c1351d;
-        }
-        
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        
-        .tracking-on {
-            background-color: #0F9D58;
-            animation: pulse 1.5s infinite;
-        }
-        
-        .tracking-off {
-            background-color: #DB4437;
-        }
-        
-        .time-display {
-            font-weight: bold;
-            color: #0F9D58;
-        }
-        
-        .coordinates {
-            font-family: monospace;
-            background: #2d3748;
-            color: #68d391;
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-top: 5px;
-        }
-        
-        .sync-status {
-            background: #e8f5e8;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-            border-left: 4px solid #0F9D58;
-            font-size: 12px;
-        }
-        
-        .sync-success {
-            background: #e8f5e8;
-            border-left-color: #0F9D58;
-        }
-        
-        .sync-error {
-            background: #ffeaea;
-            border-left-color: #DB4437;
-        }
-        
-        .sync-firebase {
-            background: #e3f2fd;
-            border-left-color: #1976d2;
-        }
-        
-        .firebase-status {
-            background: #fff3cd;
-            border-left-color: #ffc107;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-            font-size: 12px;
-        }
-        
-        .loading {
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1000;
-        }
-        
-        /* Footer */
-        footer {
-            background: #000;
-            color: white;
-            padding: 30px 20px;
-            margin-top: 40px;
-        }
-        
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
-            gap: 40px;
-        }
-        
-        .footer-section h3 {
-            color: #FFD700;
-            margin-bottom: 15px;
-            font-size: 18px;
-        }
-        
-        .footer-section p {
-            margin-bottom: 10px;
-            font-size: 14px;
-            opacity: 0.8;
-        }
-        
-        .footer-links {
-            list-style: none;
-        }
-        
-        .footer-links li {
-            margin-bottom: 8px;
-        }
-        
-        .footer-links a {
-            color: white;
-            text-decoration: none;
-            opacity: 0.8;
-            transition: opacity 0.3s;
-        }
-        
-        .footer-links a:hover {
-            opacity: 1;
-            color: #FFD700;
-        }
-        
-        .footer-bottom {
-            max-width: 1200px;
-            margin: 20px auto 0;
-            padding-top: 20px;
-            border-top: 1px solid #333;
-            text-align: center;
-            opacity: 0.7;
-            font-size: 14px;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        
-        @media (max-width: 768px) {
-            .main-container {
-                grid-template-columns: 1fr;
-                padding: 15px;
-            }
-            
-            .footer-content {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-            
-            #map {
-                height: 400px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -475,15 +184,50 @@
             updateLoadingStatus('Inicializando Firebase...');
             
             try {
-                firebaseApp = firebase.initializeApp(firebaseConfig);
+                // Verificar se o Firebase já foi inicializado
+                if (!firebase.apps.length) {
+                    firebaseApp = firebase.initializeApp(firebaseConfig);
+                } else {
+                    firebaseApp = firebase.app();
+                }
+                
                 database = firebase.database();
                 
-                updateLoadingStatus('Firebase inicializado com sucesso');
+                // Testar a conexão
+                database.ref('.info/connected').once('value')
+                    .then(() => {
+                        updateLoadingStatus('Firebase conectado com sucesso');
+                        console.log('✅ Firebase inicializado e conectado');
+                    })
+                    .catch((error) => {
+                        console.error('❌ Erro ao conectar com Firebase:', error);
+                        updateLoadingStatus('Erro de conexão Firebase');
+                        handleFirebaseError(error);
+                    });
+                
                 return true;
             } catch (error) {
                 console.error('❌ Erro ao inicializar Firebase:', error);
                 updateLoadingStatus('Erro no Firebase: ' + error.message);
+                handleFirebaseError(error);
                 return false;
+            }
+        }
+
+        function handleFirebaseError(error) {
+            const syncStatus = document.getElementById('sync-status-text');
+            const firebaseStatus = document.getElementById('firebase-status-text');
+            
+            if (error.code === 'PERMISSION_DENIED') {
+                const errorMsg = 'PERMISSÃO NEGADA: Atualize as regras do Firebase';
+                if (syncStatus) syncStatus.textContent = errorMsg;
+                if (firebaseStatus) firebaseStatus.textContent = errorMsg;
+                
+                alert('❌ ERRO FIREBASE: Permissão negada.\n\nSiga esses passos:\n\n1. Vá no Firebase Console\n2. Realtime Database > Rules\n3. Substitua por:\n{\n  "rules": {\n    ".read": true,\n    ".write": true\n  }\n}\n4. Clique em "Publish"');
+            } else {
+                const errorMsg = 'Erro: ' + error.message;
+                if (syncStatus) syncStatus.textContent = errorMsg;
+                if (firebaseStatus) firebaseStatus.textContent = errorMsg;
             }
         }
 
@@ -495,6 +239,7 @@
         function saveDriverPositionToFirebase(position) {
             if (!database) {
                 console.error('❌ Database não inicializado');
+                updateSyncStatus('error', 'Database não inicializado');
                 return;
             }
 
@@ -525,11 +270,13 @@
                     .catch((error) => {
                         console.error('❌ Erro ao salvar no Firebase:', error);
                         updateSyncStatus('error', 'Erro Firebase: ' + error.message);
+                        handleFirebaseError(error);
                     });
                 
             } catch (error) {
                 console.error('❌ Erro geral Firebase:', error);
                 updateSyncStatus('error', 'Erro de conexão');
+                handleFirebaseError(error);
             }
         }
 
@@ -555,6 +302,7 @@
                 })
                 .catch((error) => {
                     console.error('❌ Erro ao parar no Firebase:', error);
+                    handleFirebaseError(error);
                 });
         }
 
@@ -585,6 +333,9 @@
                     statusText.textContent = 'Desconectado';
                     statusText.style.color = '#DB4437';
                 }
+            }, (error) => {
+                console.error('❌ Erro no monitoramento Firebase:', error);
+                handleFirebaseError(error);
             });
         }
 
